@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+require('dotenv').config();
 const db = require('./database');
 
 const authRoutes = require('./routes/auth');
@@ -13,7 +14,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const JWT_SECRET = 'bros-betting-club-secret-key-2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'bros-betting-club-secret-key-2024';
 
 app.use(express.json());
 app.use(cookieParser());

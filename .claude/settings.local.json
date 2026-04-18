@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(sqlite3 db/game.db \"SELECT id, username, balance, is_admin FROM users;\")",
-      "Bash(sqlite3 db/game.db ' *)"
-    ]
-  }
-}
