@@ -1,0 +1,29 @@
+{
+  "name": "board-game",
+  "version": "1.0.0",
+  "description": "I designed this website for me and my bros. We want to make betting on sports games a board game.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://Haofeng125@github.com/Haofeng125/Bros-Betting-Club.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Haofeng125/Bros-Betting-Club/issues"
+  },
+  "homepage": "https://github.com/Haofeng125/Bros-Betting-Club#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.9.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "socket.io": "^4.8.3"
+  }
+}

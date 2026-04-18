@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>兄弟押注局</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">🏀 兄弟押注局</div>
+    <div class="navbar-user">
+      <span id="navRole" class="role-badge">加载中...</span>
+      <span>余额：<span class="navbar-balance" id="navBalance">--</span></span>
+      <span id="navUsername" style="color: var(--text)">--</span>
+      <button class="btn btn-ghost" onclick="logout()" style="padding: 6px 14px; font-size:13px">退出</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <div class="card-title">今日比赛</div>
+      <div class="empty-state">
+        <div class="icon">🏀</div>
+        <p>今日暂无比赛，好好休息</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function init() {
+      const res = await fetch('/api/auth/me');
+      const user = await res.json();
+      if (!user.loggedIn) {
+        window.location.href = '/login.html';
+        return;
+      }
+      document.getElementById('navUsername').textContent = user.username;
+      document.getElementById('navBalance').textContent = '¥' + user.balance.toLocaleString();
+      document.getElementById('navRole').textContent = user.role;
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    }
+
+    init();
+  </script>
+</body>
+</html>

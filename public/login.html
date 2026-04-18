@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>兄弟押注局 — 登录</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">🏀</div>
+      <div class="login-title">兄弟押注局</div>
+      <div class="login-subtitle">Bros Betting Club</div>
+
+      <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="username" placeholder="输入用户名" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="password" placeholder="输入密码" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary" id="loginBtn" onclick="login()">登录</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') login();
+    });
+
+    window.addEventListener('pageshow', () => {
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = false;
+      btn.textContent = '登录';
+    });
+
+    async function login() {
+      const btn = document.getElementById('loginBtn');
+      const errorMsg = document.getElementById('errorMsg');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        errorMsg.textContent = '请输入用户名和密码';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '登录中...';
+      errorMsg.textContent = '';
+
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        window.location.href = data.isAdmin ? '/admin' : '/';
+      } else {
+        errorMsg.textContent = data.error || '登录失败';
+        btn.disabled = false;
+        btn.textContent = '登录';
+      }
+    }
+  </script>
+</body>
+</html>
