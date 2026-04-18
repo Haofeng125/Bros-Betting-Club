@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>比赛详情 — 兄弟押注局</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 24px 28px;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .hero-winner-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .hero-teams {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 18px;
+    }
+
+    .hero-team-block { flex: 1; text-align: center; }
+
+    .hero-team-name {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-muted);
+    }
+    .hero-team-name.winner { color: var(--gold); }
+
+    .hero-vs-col {
+      padding: 0 20px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    .hero-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-box-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+    .stat-box-val { font-size: 22px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+    .result-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .result-section-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-row:hover { background: rgba(255,255,255,0.015); }
+
+    .result-left { display: flex; align-items: center; gap: 12px; }
+
+    .team-pill {
+      padding: 4px 11px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .pill-winner { background: rgba(245,197,24,0.12); color: var(--gold); border: 1px solid var(--gold-border); }
+    .pill-loser { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+    .pill-refund { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
+
+    .result-name { font-size: 15px; font-weight: 700; }
+    .result-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .result-right { text-align: right; }
+    .result-payout { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .result-profit { font-size: 12px; margin-top: 2px; }
+
+    .voided-banner {
+      background: var(--red-dim);
+      border: 1px solid var(--red-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      text-align: center;
+      color: var(--red);
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .me-highlight { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a href="/" style="color:var(--gold);text-decoration:none;font-size:14px;font-weight:600">← 大厅</a>
+    </div>
+    <div class="navbar-user">
+      <span>余额 <span class="navbar-balance" id="navBalance">--</span></span>
+      <span class="nav-username" id="navUsername">--</span>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:680px" id="content">
+    <div class="empty-state"><p>加载中...</p></div>
+  </div>
+
+  <script>
+    const gameId = parseInt(window.location.pathname.split('/')[2]);
+
+    async function init() {
+      const meRes = await fetch('/api/auth/me');
+      const me = await meRes.json();
+      if (!me.loggedIn) { window.location.href = '/login.html'; return; }
+      document.getElementById('navUsername').textContent = me.username;
+      document.getElementById('navBalance').textContent = '¥' + me.balance.toLocaleString();
+
+      const res = await fetch(`/api/game/${gameId}/results`);
+      if (!res.ok) { document.getElementById('content').innerHTML = '<div class="empty-state"><p>比赛不存在</p></div>'; return; }
+      render(await res.json(), me);
+    }
+
+    function render(data, me) {
+      const { game, results, refundedBets, sumA, sumB, pool, oddsA, oddsB } = data;
+      const isVoided = game.status === 'voided';
+      const isSettled = game.status === 'settled';
+      const winnerSide = game.winner;
+      const winnerName = winnerSide === 'A' ? game.team_a : winnerSide === 'B' ? game.team_b : null;
+
+      let html = '';
+
+      // Hero
+      html += `<div class="hero">`;
+      if (isSettled && winnerName) {
+        html += `<div class="hero-winner-label">🏆 &nbsp;${winnerName} 获胜</div>`;
+      } else if (isVoided) {
+        html += `<div class="hero-winner-label" style="color:var(--text-muted)">⚠️ &nbsp;已作废</div>`;
+      }
+      html += `
+        <div class="hero-teams">
+          <div class="hero-team-block">
+            <div class="hero-team-name ${winnerSide === 'A' ? 'winner' : ''}">${game.team_a}</div>
+          </div>
+          <div class="hero-vs-col">VS</div>
+          <div class="hero-team-block">
+            <div class="hero-team-name ${winnerSide === 'B' ? 'winner' : ''}">${game.team_b}</div>
+          </div>
+        </div>
+        <div class="hero-sub">${formatDate(game.deadline)} 截止投注</div>
+      </div>`;
+
+      if (isVoided) {
+        html += `<div class="voided-banner">无人投注，本场已作废</div>`;
+      }
+
+      // Stats
+      if (isSettled && pool > 0) {
+        html += `<div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-box-label">总下注</div>
+            <div class="stat-box-val">¥${pool.toLocaleString()}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">${game.team_a} 赔率</div>
+            <div class="stat-box-val" style="color:var(--blue)">${oddsA ? oddsA.toFixed(2) + 'x' : '—'}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">${game.team_b} 赔率</div>
+            <div class="stat-box-val" style="color:var(--red)">${oddsB ? oddsB.toFixed(2) + 'x' : '—'}</div>
+          </div>
+        </div>`;
+      }
+
+      const winners = results.filter(r => r.won);
+      const losers = results.filter(r => !r.won);
+
+      if (winners.length) {
+        html += `<div class="result-section">
+          <div class="result-section-header">🏆 获胜</div>`;
+        html += winners.map(r => resultRow(r, game, true, me.username)).join('');
+        html += `</div>`;
+      }
+
+      if (losers.length) {
+        html += `<div class="result-section">
+          <div class="result-section-header">💸 落败</div>`;
+        html += losers.map(r => resultRow(r, game, false, me.username)).join('');
+        html += `</div>`;
+      }
+
+      if (refundedBets.length) {
+        html += `<div class="result-section">
+          <div class="result-section-header">↩️ 退款</div>`;
+        html += refundedBets.map(r => `
+          <div class="result-row">
+            <div class="result-left">
+              <span class="team-pill pill-refund">退款</span>
+              <div>
+                <div class="result-name ${r.username === me.username ? 'me-highlight' : ''}">${r.username}${r.username === me.username ? ' (你)' : ''}</div>
+              </div>
+            </div>
+            <div class="result-right">
+              <div class="result-payout" style="color:var(--blue)">¥${r.amount.toLocaleString()}</div>
+            </div>
+          </div>`).join('');
+        html += `</div>`;
+      }
+
+      if (!results.length && !refundedBets.length) {
+        html += `<div class="result-section" style="padding:40px;text-align:center;color:var(--text-muted)">本场无人投注</div>`;
+      }
+
+      document.getElementById('content').innerHTML = html;
+    }
+
+    function resultRow(r, game, won, myUsername) {
+      const teamName = r.team === 'A' ? game.team_a : game.team_b;
+      const pillClass = won ? 'pill-winner' : 'pill-loser';
+      const payoutColor = won ? 'var(--green)' : 'var(--red)';
+      const isMe = r.username === myUsername;
+      return `
+        <div class="result-row">
+          <div class="result-left">
+            <span class="team-pill ${pillClass}">${teamName}</span>
+            <div>
+              <div class="result-name ${isMe ? 'me-highlight' : ''}">${r.username}${isMe ? ' (你)' : ''}</div>
+              <div class="result-sub">投注 ¥${r.amount.toLocaleString()}</div>
+            </div>
+          </div>
+          <div class="result-right">
+            <div class="result-payout" style="color:${payoutColor}">
+              ${won ? '+¥' + r.payout.toLocaleString() : '¥0'}
+            </div>
+            <div class="result-profit" style="color:${won ? 'var(--green)' : 'var(--text-muted)'}">
+              ${won ? '净赚 +¥' + r.profit.toLocaleString() : '亏损 -¥' + r.amount.toLocaleString()}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function formatDate(str) {
+      const d = new Date(str);
+      return `${d.getMonth()+1}月${d.getDate()}日 ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -6,6 +6,28 @@ const db = require('../database');
 module.exports = (JWT_SECRET) => {
   const router = express.Router();
 
+  const REFERRAL_CODE = '302';
+
+  router.post('/register', (req, res) => {
+    const { username, password, referral } = req.body;
+    if (!username || !password || !referral)
+      return res.json({ success: false, error: '请填写所有字段' });
+    if (referral !== REFERRAL_CODE)
+      return res.json({ success: false, error: '邀请码错误' });
+    if (username.length < 2 || username.length > 16)
+      return res.json({ success: false, error: '用户名长度须在 2–16 个字符之间' });
+    if (password.length < 6)
+      return res.json({ success: false, error: '密码至少 6 位' });
+
+    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    if (existing)
+      return res.json({ success: false, error: '用户名已被使用' });
+
+    const hash = bcrypt.hashSync(password, 10);
+    db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hash);
+    res.json({ success: true });
+  });
+
   router.post('/login', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password)
@@ -34,12 +56,47 @@ module.exports = (JWT_SECRET) => {
     res.json({ success: true });
   });
 
+  router.post('/change-password', (req, res) => {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    let userId;
+    try { userId = jwt.verify(token, JWT_SECRET).id; } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword)
+      return res.json({ success: false, error: '请填写所有字段' });
+    if (newPassword.length < 6)
+      return res.json({ success: false, error: '新密码至少 6 位' });
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (!bcrypt.compareSync(currentPassword, user.password))
+      return res.json({ success: false, error: '当前密码错误' });
+
+    const hash = bcrypt.hashSync(newPassword, 10);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, userId);
+    res.json({ success: true });
+  });
+
+  router.get('/leaderboard', (req, res) => {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    try { jwt.verify(token, JWT_SECRET); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+
+    const users = db.prepare('SELECT id, username, balance, loan_amount FROM users ORDER BY balance DESC').all();
+    const collator = new Intl.Collator('zh-CN', { sensitivity: 'base' });
+    users.sort((a, b) => {
+      if (b.balance !== a.balance) return b.balance - a.balance;
+      return collator.compare(a.username[0] || '', b.username[0] || '');
+    });
+    res.json(users);
+  });
+
   router.get('/me', (req, res) => {
     const token = req.cookies.token;
     if (!token) return res.json({ loggedIn: false });
     try {
       const user = jwt.verify(token, JWT_SECRET);
-      const row = db.prepare('SELECT id, username, role, balance, loan_amount, harden_tokens, is_admin FROM users WHERE id = ?').get(user.id);
+      const row = db.prepare('SELECT id, username, balance, loan_amount, is_admin FROM users WHERE id = ?').get(user.id);
       res.json({ loggedIn: true, ...row });
     } catch {
       res.json({ loggedIn: false });

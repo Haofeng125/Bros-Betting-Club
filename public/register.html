@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>注册 — 兄弟押注局</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .login-card .form-group label { text-align: left; }
+    .login-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 6px 0 20px;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .login-divider::before,
+    .login-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">🏀</div>
+      <div class="login-title">注册账号</div>
+      <div class="login-subtitle">Bros Betting Club</div>
+
+      <div class="form-group" style="text-align:left">
+        <label>用户名</label>
+        <input type="text" id="username" placeholder="2–16 个字符" autocomplete="username">
+      </div>
+      <div class="form-group" style="text-align:left">
+        <label>密码</label>
+        <input type="password" id="password" placeholder="至少 6 位" autocomplete="new-password">
+      </div>
+      <div class="form-group" style="text-align:left">
+        <label>确认密码</label>
+        <input type="password" id="password2" placeholder="再次输入密码" autocomplete="new-password">
+      </div>
+      <div class="form-group" style="text-align:left">
+        <label>邀请码</label>
+        <input type="text" id="referral" placeholder="输入邀请码" autocomplete="off">
+      </div>
+
+      <button class="btn btn-primary" id="regBtn" onclick="register()">注 册</button>
+      <div class="error-msg" id="errorMsg"></div>
+      <div class="login-divider">已有账号？</div>
+      <a href="/login.html" class="btn btn-ghost" style="width:100%;justify-content:center;text-decoration:none">返回登录</a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('password2').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') register();
+    });
+    document.getElementById('referral').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') register();
+    });
+
+    window.addEventListener('pageshow', () => {
+      const btn = document.getElementById('regBtn');
+      btn.disabled = false;
+      btn.textContent = '注 册';
+    });
+
+    async function register() {
+      const btn = document.getElementById('regBtn');
+      const errorMsg = document.getElementById('errorMsg');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const password2 = document.getElementById('password2').value;
+      const referral = document.getElementById('referral').value.trim();
+
+      errorMsg.textContent = '';
+
+      if (!username || !password || !password2 || !referral) {
+        errorMsg.textContent = '请填写所有字段';
+        return;
+      }
+      if (password !== password2) {
+        errorMsg.textContent = '两次密码输入不一致';
+        document.getElementById('password2').focus();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '注册中...';
+
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, referral })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        window.location.href = '/login.html';
+      } else {
+        errorMsg.textContent = data.error || '注册失败';
+        btn.disabled = false;
+        btn.textContent = '注 册';
+      }
+    }
+  </script>
+</body>
+</html>

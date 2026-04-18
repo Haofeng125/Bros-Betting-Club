@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>兄弟押注局 — 登录</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .login-card .form-group label {
+      text-align: left;
+    }
+    .login-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 6px 0 20px;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .login-divider::before,
+    .login-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+  </style>
 </head>
 <body>
   <div class="login-page">
@@ -13,17 +33,19 @@
       <div class="login-title">兄弟押注局</div>
       <div class="login-subtitle">Bros Betting Club</div>
 
-      <div class="form-group">
+      <div class="form-group" style="text-align:left">
         <label>用户名</label>
         <input type="text" id="username" placeholder="输入用户名" autocomplete="username">
       </div>
-      <div class="form-group">
+      <div class="form-group" style="text-align:left">
         <label>密码</label>
         <input type="password" id="password" placeholder="输入密码" autocomplete="current-password">
       </div>
 
-      <button class="btn btn-primary" id="loginBtn" onclick="login()">登录</button>
+      <button class="btn btn-primary" id="loginBtn" onclick="login()">登 录</button>
       <div class="error-msg" id="errorMsg"></div>
+      <div class="login-divider">还没有账号？</div>
+      <a href="/register" class="btn btn-ghost" style="width:100%;justify-content:center;text-decoration:none">注 册</a>
     </div>
   </div>
 
@@ -35,7 +57,7 @@
     window.addEventListener('pageshow', () => {
       const btn = document.getElementById('loginBtn');
       btn.disabled = false;
-      btn.textContent = '登录';
+      btn.textContent = '登 录';
     });
 
     async function login() {
@@ -61,11 +83,11 @@
       const data = await res.json();
 
       if (data.success) {
-        window.location.href = data.isAdmin ? '/admin' : '/';
+        window.location.href = '/';
       } else {
         errorMsg.textContent = data.error || '登录失败';
         btn.disabled = false;
-        btn.textContent = '登录';
+        btn.textContent = '登 录';
       }
     }
   </script>

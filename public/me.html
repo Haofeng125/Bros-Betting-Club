@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的主页 — 兄弟押注局</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .profile-hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold) 0%, #c9a000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 800;
+      color: #09090f;
+      flex-shrink: 0;
+    }
+
+    .profile-info { flex: 1; }
+
+    .profile-name {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      margin-bottom: 6px;
+    }
+
+    .profile-balance {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: -1px;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 4px;
+    }
+
+    .profile-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-box-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 8px;
+    }
+
+    .stat-box-val {
+      font-size: 24px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .action-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .action-card:hover {
+      border-color: var(--border-bright);
+      background: var(--surface2);
+    }
+
+    .action-icon {
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+
+    .action-label {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .action-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    @media (max-width: 600px) {
+      .profile-hero { flex-direction: column; text-align: center; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .action-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a href="/" style="color:var(--gold);text-decoration:none;font-size:14px;font-weight:600">← 大厅</a>
+    </div>
+    <div class="navbar-user">
+      <a href="/intro" class="btn btn-ghost">规则</a>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:680px">
+    <div id="content"><div class="empty-state"><p>加载中...</p></div></div>
+  </div>
+
+  <script>
+    async function init() {
+      const [meRes, betsRes] = await Promise.all([
+        fetch('/api/auth/me'),
+        fetch('/api/game/me/bets')
+      ]);
+      const me = await meRes.json();
+      if (!me.loggedIn) { window.location.href = '/login.html'; return; }
+      const bets = betsRes.ok ? await betsRes.json() : [];
+      render(me, bets);
+    }
+
+    function render(me, bets) {
+      const wins = bets.filter(b => b.won).length;
+      const losses = bets.filter(b => b.lost).length;
+      const winRate = (wins + losses) > 0 ? Math.round(wins / (wins + losses) * 100) : 0;
+
+      const html = `
+        <div class="profile-hero">
+          <div class="avatar">${me.username[0].toUpperCase()}</div>
+          <div class="profile-info">
+            <div class="profile-name">${me.username}</div>
+            <div class="profile-balance">¥${me.balance.toLocaleString()}</div>
+            <div class="profile-sub">${me.loan_amount > 0 ? `欠款 ¥${me.loan_amount.toLocaleString()}` : '账户正常'}</div>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-box-label">总场次</div>
+            <div class="stat-box-val" style="color:var(--text)">${bets.length}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">胜场</div>
+            <div class="stat-box-val" style="color:var(--green)">${wins}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">败场</div>
+            <div class="stat-box-val" style="color:var(--red)">${losses}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">胜率</div>
+            <div class="stat-box-val" style="color:var(--gold)">${winRate}%</div>
+          </div>
+        </div>
+
+        <div class="action-grid">
+          <a href="/my-history" class="action-card">
+            <div class="action-icon">📋</div>
+            <div>
+              <div class="action-label">投注历史</div>
+              <div class="action-sub">查看所有历史押注记录</div>
+            </div>
+          </a>
+          <a href="/change-password" class="action-card">
+            <div class="action-icon">🔑</div>
+            <div>
+              <div class="action-label">修改密码</div>
+              <div class="action-sub">更新你的账户密码</div>
+            </div>
+          </a>
+        </div>`;
+
+      document.getElementById('content').innerHTML = html;
+    }
+
+    init();
+  </script>
+</body>
+</html>

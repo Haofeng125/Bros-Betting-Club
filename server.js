@@ -4,8 +4,8 @@ const { Server } = require('socket.io');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const db = require('./database');
 
-require('./database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 
@@ -17,6 +17,8 @@ const JWT_SECRET = 'bros-betting-club-secret-key-2024';
 
 app.use(express.json());
 app.use(cookieParser());
+
+// ── Auth middleware ──
 
 function requireAuth(req, res, next) {
   const token = req.cookies.token;
@@ -42,8 +44,12 @@ function requireAdmin(req, res, next) {
   }
 }
 
+// ── API routes ──
+
 app.use('/api/auth', authRoutes(JWT_SECRET));
-app.use('/api/admin', adminRoutes(JWT_SECRET));
+app.use('/api/admin', adminRoutes(JWT_SECRET, io));
+
+// ── Page routes ──
 
 app.get('/', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -53,13 +59,48 @@ app.get('/admin', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+app.get('/game/:id', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'game.html'));
+});
+
+app.get('/history/:id', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'history.html'));
+});
+
+app.get('/me', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'me.html'));
+});
+
+app.get('/intro', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'intro.html'));
+});
+
+app.get('/leaderboard', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'leaderboard.html'));
+});
+
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+app.get('/my-history', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'my-history.html'));
+});
+
+app.get('/change-password', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'change-password.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Socket.io: auth via httpOnly cookie ──
+
 io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  if (!token) return next(new Error('未授权'));
+  const cookieHeader = socket.handshake.headers.cookie || '';
+  const match = cookieHeader.match(/(?:^|;\s*)token=([^;]+)/);
+  if (!match) return next(new Error('未授权'));
   try {
-    socket.user = jwt.verify(token, JWT_SECRET);
+    socket.user = jwt.verify(match[1], JWT_SECRET);
     next();
   } catch {
     next(new Error('未授权'));
@@ -67,11 +108,34 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(`用户连接: ${socket.user.username}`);
-  socket.on('disconnect', () => {
-    console.log(`用户断开: ${socket.user.username}`);
+  socket.on('joinGame', (gameId) => {
+    socket.join(`game:${gameId}`);
   });
+  socket.on('disconnect', () => {});
 });
+
+// Register game routes after io is ready
+const gameRoutes = require('./routes/game');
+app.use('/api/game', gameRoutes(JWT_SECRET, io));
+
+// ── Auto-close games past deadline ──
+
+function closeExpiredGames() {
+  const now = new Date().toISOString();
+  const expired = db.prepare(`
+    SELECT id FROM games WHERE status IN ('open', 'pending') AND deadline <= ?
+  `).all(now);
+
+  expired.forEach(({ id }) => {
+    db.prepare(`UPDATE games SET status = 'closed' WHERE id = ?`).run(id);
+    io.to(`game:${id}`).emit('gameStatusChanged', { status: 'closed' });
+    console.log(`比赛 #${id} 投注已截止`);
+  });
+}
+
+setInterval(closeExpiredGames, 15000);
+
+// ── Start ──
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

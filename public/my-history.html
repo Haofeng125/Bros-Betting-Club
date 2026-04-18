@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>投注历史 — 兄弟押注局</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .history-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item:hover { background: rgba(255,255,255,0.02); }
+
+    .history-item-left { flex: 1; }
+
+    .history-matchup {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .history-detail {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .history-result {
+      font-size: 16px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      min-width: 48px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a href="/me" style="color:var(--gold);text-decoration:none;font-size:14px;font-weight:600">← 我的主页</a>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:680px">
+    <div id="content"><div class="empty-state"><p>加载中...</p></div></div>
+  </div>
+
+  <script>
+    async function init() {
+      const [meRes, betsRes] = await Promise.all([
+        fetch('/api/auth/me'),
+        fetch('/api/game/me/bets')
+      ]);
+      const me = await meRes.json();
+      if (!me.loggedIn) { window.location.href = '/login.html'; return; }
+      const bets = betsRes.ok ? await betsRes.json() : [];
+      render(bets);
+    }
+
+    function render(bets) {
+      let html = `<div class="history-section">`;
+
+      if (!bets.length) {
+        html += `<div style="padding:60px;text-align:center;color:var(--text-muted);font-size:14px">暂无投注记录</div>`;
+      } else {
+        html += bets.map(b => {
+          const teamBet = b.team === 'A' ? b.team_a : b.team_b;
+          const winner = b.winner === 'A' ? b.team_a : b.winner === 'B' ? b.team_b : null;
+          let resultText = '—';
+          let resultColor = 'var(--text-muted)';
+          if (b.game_status === 'settled') {
+            if (b.won) { resultText = '胜'; resultColor = 'var(--green)'; }
+            else { resultText = '负'; resultColor = 'var(--red)'; }
+          } else if (b.game_status === 'voided' || b.status === 'refunded') {
+            resultText = '退款'; resultColor = 'var(--blue)';
+          }
+          return `
+            <div class="history-item" onclick="window.location='/history/${b.game_id}'">
+              <div class="history-item-left">
+                <div class="history-matchup">${b.team_a} vs ${b.team_b}${winner ? ` · ${winner}胜` : ''}</div>
+                <div class="history-detail">投 ${teamBet} &nbsp;¥${b.amount.toLocaleString()} &nbsp;·&nbsp; ${formatDate(b.deadline)}</div>
+              </div>
+              <div class="history-result" style="color:${resultColor}">${resultText}</div>
+            </div>`;
+        }).join('');
+      }
+
+      html += `</div>`;
+      document.getElementById('content').innerHTML = html;
+    }
+
+    function formatDate(str) {
+      const d = new Date(str);
+      return `${d.getMonth()+1}月${d.getDate()}日`;
+    }
+
+    init();
+  </script>
+</body>
+</html>

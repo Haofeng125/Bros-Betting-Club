@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>规则介绍 — 兄弟押注局</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 4px;
+      gap: 2px;
+      margin-bottom: 20px;
+      width: fit-content;
+    }
+
+    .tab-btn {
+      padding: 8px 22px;
+      border-radius: var(--radius-pill);
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      background: var(--gold);
+      color: #09090f;
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .rule-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 12px;
+    }
+
+    .rule-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rule-body {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.9;
+    }
+
+    .rule-body ul {
+      padding-left: 18px;
+      margin: 8px 0;
+    }
+
+    .rule-body li { margin-bottom: 6px; }
+
+    .highlight { color: var(--gold); font-weight: 600; }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: var(--radius-pill);
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .tag-note { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold-border); }
+    .tag-info { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
+
+    .example-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.9;
+    }
+    .example-box strong { color: var(--text); font-weight: 700; }
+
+    table.odds-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+    .odds-table th {
+      text-align: left;
+      padding: 9px 14px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .odds-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .odds-table tr:last-child td { border-bottom: none; }
+
+    .divider-line {
+      height: 1px;
+      background: var(--border);
+      margin: 14px 0;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a href="/" style="color:var(--gold);text-decoration:none;font-size:14px;font-weight:600">← 返回大厅</a>
+    </div>
+    <div class="navbar-user">
+      <a href="/me" class="btn btn-ghost">我的主页</a>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:720px">
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('basic')">基础规则</button>
+      <button class="tab-btn" onclick="switchTab('odds')">赔率说明</button>
+      <button class="tab-btn" onclick="switchTab('special')">特殊情况</button>
+    </div>
+
+    <!-- 基础规则 -->
+    <div id="tab-basic" class="tab-content active">
+      <div class="rule-card">
+        <div class="rule-title">🎯 游戏目标</div>
+        <div class="rule-body">
+          预测每场比赛的胜负，通过押注赚取更多筹码。每人初始拥有
+          <span class="highlight">¥10,000</span>，无法重置，请谨慎下注。
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">📋 游戏流程</div>
+        <div class="rule-body">
+          <ul>
+            <li>管理员参考权威博彩平台赔率创建比赛，并设定<span class="highlight">投注截止时间</span></li>
+            <li>截止前，所有人均可在大厅点击比赛进入投注页面</li>
+            <li>选择支持的队伍，输入投注金额，确认提交</li>
+            <li>每人每场<span class="highlight">只能投注一次</span>，不可修改</li>
+            <li>比赛结束后，管理员公布结果，系统自动结算</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">💰 结算方式</div>
+        <div class="rule-body">
+          采用<span class="highlight">固定赔率</span>制度，赔率由管理员参考权威博彩平台设定。
+          <ul>
+            <li>若押注队伍获胜：获得 <span class="highlight">投注额 × 赔率</span> 的金额（含本金）</li>
+            <li>若押注队伍落败：损失全部投注额</li>
+            <li>不投注不扣钱，可以随时选择不参与某场比赛</li>
+          </ul>
+          <div class="example-box">
+            <strong>示例：</strong>湖人 赔率 1.44x &nbsp;·&nbsp; 勇士 赔率 2.65x<br>
+            投 ¥1,000 押湖人 → 若湖人赢：获得 ¥1,440（净赚 ¥440）<br>
+            投 ¥500 押勇士 → 若勇士赢：获得 ¥1,325（净赚 ¥825）<br>
+            若押错：损失全部投注额
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 赔率说明 -->
+    <div id="tab-odds" class="tab-content">
+      <div class="rule-card">
+        <div class="rule-title">📊 赔率是什么？</div>
+        <div class="rule-body">
+          赔率（Odds）表示你押注后的<span class="highlight">回报倍率</span>。数字越低说明该队越被看好，数字越高说明该队是冷门。
+          <div class="example-box">
+            <strong>1.44x</strong> → 投 ¥100，赢得 ¥144（净赚 ¥44）<br>
+            <strong>2.65x</strong> → 投 ¥100，赢得 ¥265（净赚 ¥165）<br>
+            <strong>1.10x</strong> → 热门队，几乎必赢，但收益很少<br>
+            <strong>5.00x</strong> → 冷门队，押对了赚大
+          </div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">📈 赔率来源</div>
+        <div class="rule-body">
+          赔率由管理员参考<span class="highlight">权威博彩平台</span>后手动输入，反映专业机构对比赛胜负的综合判断。
+          <ul>
+            <li>赔率在创建比赛时锁定，不会随投注变化</li>
+            <li>投注页可以看到两队的固定赔率</li>
+            <li>输入金额后自动显示「若获胜可得」的预期金额</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">🧮 计算公式</div>
+        <div class="rule-body">
+          <table class="odds-table">
+            <thead>
+              <tr>
+                <th>情况</th>
+                <th>公式</th>
+                <th>示例（赔率 1.44x，投 ¥1,000）</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>获胜收入</td>
+                <td><span class="highlight">投注额 × 赔率</span></td>
+                <td style="color:var(--green)">¥1,000 × 1.44 = ¥1,440</td>
+              </tr>
+              <tr>
+                <td>净赚</td>
+                <td>收入 − 投注额</td>
+                <td style="color:var(--green)">¥1,440 − ¥1,000 = +¥440</td>
+              </tr>
+              <tr>
+                <td>落败</td>
+                <td>损失投注额</td>
+                <td style="color:var(--red)">−¥1,000</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 特殊情况 -->
+    <div id="tab-special" class="tab-content">
+      <div class="rule-card">
+        <div class="rule-title">⚠️ 比赛作废</div>
+        <div class="rule-body">
+          <span class="tag tag-note">特殊</span>&nbsp;
+          如果本场<span class="highlight">无人投注</span>，管理员公布结果后比赛将被标记为「作废」，不进行任何结算。
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">⏰ 投注截止</div>
+        <div class="rule-body">
+          <ul>
+            <li>截止时间一到，系统自动关闭投注，不再接受新的下注</li>
+            <li>管理员可在截止前删除比赛（若有投注则自动退款）</li>
+            <li>已结算的比赛<span class="highlight">不可删除或修改</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">💸 余额不足</div>
+        <div class="rule-body">
+          <ul>
+            <li>投注金额不可超过当前余额</li>
+            <li>选择不参与某场比赛不会有任何扣款</li>
+            <li>如需借款，可联系管理员手动充值</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">👀 实时公开</div>
+        <div class="rule-body">
+          投注期间，所有人的下注情况（队伍 + 金额）对所有玩家<span class="highlight">实时可见</span>，信息完全公开透明。
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach((t, i) => {
+        t.classList.toggle('active', ['basic', 'odds', 'special'][i] === name);
+      });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+  </script>
+</body>
+</html>

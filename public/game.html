@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>比赛投注 — 兄弟押注局</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* ── Game Hero ── */
+    .game-hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px 22px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .hero-matchup {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 20px;
+    }
+
+    .hero-team {
+      flex: 1;
+      text-align: center;
+    }
+
+    .hero-team-name {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .hero-team-role {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .hero-vs {
+      padding: 0 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    .countdown-block {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .countdown {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 2px;
+    }
+
+    .countdown.urgent { color: var(--red); }
+    .countdown-label { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    .status-msg {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .status-settled { color: var(--gold); font-size: 18px; font-weight: 700; }
+
+    /* ── Odds Strip ── */
+    .odds-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .odds-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .odds-panel.side-a { border-left: 3px solid var(--blue); }
+    .odds-panel.side-b { border-left: 3px solid var(--red); }
+
+    .odds-team-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .odds-bets { font-size: 12px; color: var(--text-muted); }
+
+    .odds-number {
+      font-size: 32px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .side-a .odds-number { color: var(--blue); }
+    .side-b .odds-number { color: var(--red); }
+    .odds-x { font-size: 14px; font-weight: 600; opacity: 0.7; }
+
+    .pool-strip {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .pool-strip span { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ── Bet Form ── */
+    .bet-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .bet-form-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .bet-form-body { padding: 20px; }
+
+    .team-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .team-toggle-btn {
+      padding: 14px 12px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border-bright);
+      background: var(--surface2);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: inherit;
+      text-align: center;
+    }
+
+    .team-toggle-btn .t-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .team-toggle-btn .t-odds {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .team-toggle-btn.sel-a {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+    }
+    .team-toggle-btn.sel-a .t-name { color: var(--blue); }
+    .team-toggle-btn.sel-a .t-odds { color: var(--blue); }
+
+    .team-toggle-btn.sel-b {
+      border-color: var(--red);
+      background: var(--red-dim);
+    }
+    .team-toggle-btn.sel-b .t-name { color: var(--red); }
+    .team-toggle-btn.sel-b .t-odds { color: var(--red); }
+
+    .team-toggle-btn:hover:not(.sel-a):not(.sel-b) {
+      border-color: var(--text-muted);
+    }
+
+    .amount-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .amount-input-row {
+      display: flex;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 10px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .amount-input-row:focus-within {
+      border-color: var(--gold-border);
+      box-shadow: 0 0 0 3px var(--gold-dim);
+    }
+
+    .amount-prefix {
+      padding: 13px 14px;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: var(--surface3);
+      border-right: 1px solid var(--border);
+      user-select: none;
+    }
+
+    .amount-input-row input {
+      flex: 1;
+      padding: 13px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+      outline: none;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .quick-chips {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: inherit;
+    }
+    .chip:hover { border-color: var(--gold-border); color: var(--gold); }
+
+    .payout-preview {
+      background: var(--green-dim);
+      border: 1px solid rgba(48, 216, 123, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      display: none;
+    }
+    .payout-preview.visible { display: flex; justify-content: space-between; align-items: center; }
+    .payout-label { font-size: 12px; color: var(--text-muted); }
+    .payout-amount { font-size: 20px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
+    .payout-profit { font-size: 12px; color: var(--green); margin-top: 1px; }
+
+    /* ── My Bet Card ── */
+    .my-bet-card {
+      background: var(--surface);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .my-bet-card.visible { display: block; }
+
+    .my-bet-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .my-bet-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .my-bet-left { display: flex; align-items: center; gap: 12px; }
+
+    .my-bet-team-tag {
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .tag-a { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
+    .tag-b { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+
+    .my-bet-amount { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .my-bet-right { text-align: right; }
+    .my-bet-return-label { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+    .my-bet-return-val { font-size: 20px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
+
+    /* ── Bets List ── */
+    .bets-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .bets-card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .bets-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .bets-count {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bet-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+    .bet-row:last-child { border-bottom: none; }
+    .bet-row:hover { background: rgba(255,255,255,0.015); }
+
+    .bet-player-info { display: flex; align-items: center; gap: 10px; }
+    .bet-name { font-size: 14px; font-weight: 600; }
+
+    .bet-amount { font-size: 14px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+    .bet-hidden { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    .no-bets {
+      padding: 32px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a href="/" style="color:var(--gold);text-decoration:none;font-size:14px;font-weight:600">← 大厅</a>
+    </div>
+    <div class="navbar-user">
+      <span>余额 <span class="navbar-balance" id="navBalance">--</span></span>
+      <span class="nav-username" id="navUsername">--</span>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:680px">
+
+    <!-- Game Hero -->
+    <div class="game-hero">
+      <div class="hero-matchup">
+        <div class="hero-team">
+          <div class="hero-team-name" id="teamA">--</div>
+          <div class="hero-team-role">主队</div>
+        </div>
+        <div class="hero-vs">VS</div>
+        <div class="hero-team">
+          <div class="hero-team-name" id="teamB">--</div>
+          <div class="hero-team-role">客队</div>
+        </div>
+      </div>
+      <div id="timerSection">
+        <div class="countdown-block">
+          <div class="countdown" id="countdown">--:--:--</div>
+          <div class="countdown-label">距投注截止</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Odds Panels -->
+    <div class="odds-strip">
+      <div class="odds-panel side-a">
+        <div>
+          <div class="odds-team-name" id="oddsTeamA">--</div>
+          <div class="odds-bets" id="sumA">已投 ¥0</div>
+        </div>
+        <div style="text-align:right">
+          <span class="odds-number" id="oddsA">--</span><span class="odds-x">x</span>
+        </div>
+      </div>
+      <div class="odds-panel side-b">
+        <div>
+          <div class="odds-team-name" id="oddsTeamB">--</div>
+          <div class="odds-bets" id="sumB">已投 ¥0</div>
+        </div>
+        <div style="text-align:right">
+          <span class="odds-number" id="oddsB">--</span><span class="odds-x">x</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pool -->
+    <div class="pool-strip">总下注额 <span id="poolAmount">¥0</span></div>
+
+    <!-- My Bet -->
+    <div class="my-bet-card" id="myBetCard">
+      <div class="my-bet-label">我的投注</div>
+      <div class="my-bet-row">
+        <div class="my-bet-left">
+          <span class="my-bet-team-tag" id="myBetTag"></span>
+          <span class="my-bet-amount" id="myBetAmount"></span>
+        </div>
+        <div class="my-bet-right">
+          <div class="my-bet-return-label">若获胜可得</div>
+          <div class="my-bet-return-val" id="myBetReturn">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bet Form -->
+    <div class="bet-form" id="betForm" style="display:none">
+      <div class="bet-form-header">下注</div>
+      <div class="bet-form-body">
+        <div class="team-toggle">
+          <button class="team-toggle-btn" id="btnA" onclick="selectTeam('A')">
+            <div class="t-name" id="btnAName">--</div>
+            <div class="t-odds" id="btnAOdds">--</div>
+          </button>
+          <button class="team-toggle-btn" id="btnB" onclick="selectTeam('B')">
+            <div class="t-name" id="btnBName">--</div>
+            <div class="t-odds" id="btnBOdds">--</div>
+          </button>
+        </div>
+
+        <div class="amount-label">投注金额</div>
+        <div class="amount-input-row">
+          <div class="amount-prefix">¥</div>
+          <input type="number" id="betAmount" placeholder="0" min="1" oninput="updateExpected()">
+        </div>
+
+        <div class="quick-chips">
+          <button class="chip" onclick="setAmount(1)">全押</button>
+          <button class="chip" onclick="setAmount(0.5)">½</button>
+          <button class="chip" onclick="setAmount(0.25)">¼</button>
+          <button class="chip" onclick="setAmount(0.1)">10%</button>
+          <button class="chip" onclick="setAmount(0.05)">5%</button>
+        </div>
+
+        <div class="payout-preview" id="payoutPreview">
+          <div>
+            <div class="payout-label">若获胜可得</div>
+            <div class="payout-profit" id="payoutProfit"></div>
+          </div>
+          <div class="payout-amount" id="payoutAmount">--</div>
+        </div>
+
+        <button class="btn btn-primary" id="betBtn" onclick="placeBet()">确认投注</button>
+        <div class="error-msg" id="betError"></div>
+      </div>
+    </div>
+
+    <!-- Bets List -->
+    <div class="bets-card">
+      <div class="bets-card-header">
+        <span class="bets-card-title">当前投注</span>
+        <span class="bets-count" id="betsCount">0</span>
+      </div>
+      <div id="betsList">
+        <div class="no-bets">暂无投注</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal" style="max-width:360px;text-align:center">
+      <div style="font-size:32px;margin-bottom:14px">⚠️</div>
+      <div class="modal-title" style="text-align:center">确认投注？</div>
+      <p id="confirmText" style="font-size:15px;color:var(--text);margin-bottom:8px;font-weight:600"></p>
+      <p id="confirmReturn" style="font-size:13px;color:var(--green);margin-bottom:20px"></p>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:24px">一旦下注，概不后悔。</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" style="margin-top:0" onclick="confirmBet()">确认</button>
+        <button class="btn btn-ghost" style="border-radius:var(--radius-sm);flex:1" onclick="closeConfirm()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const gameId = parseInt(window.location.pathname.split('/')[2]);
+    const socket = io();
+
+    let myUser = null;
+    let gameData = null;
+    let selectedTeam = null;
+    let countdownTimer = null;
+
+    async function init() {
+      const meRes = await fetch('/api/auth/me');
+      myUser = await meRes.json();
+      if (!myUser.loggedIn) { window.location.href = '/login.html'; return; }
+
+      document.getElementById('navUsername').textContent = myUser.username;
+      document.getElementById('navBalance').textContent = '¥' + myUser.balance.toLocaleString();
+
+      await loadGame();
+      socket.emit('joinGame', gameId);
+    }
+
+    async function loadGame() {
+      const res = await fetch(`/api/game/${gameId}`);
+      if (!res.ok) { alert('比赛不存在'); window.location.href = '/'; return; }
+      const data = await res.json();
+      gameData = data.game;
+      renderGame(data);
+    }
+
+    function renderGame(data) {
+      const { game, bets, totals, myBet } = data;
+
+      document.title = `${game.team_a} vs ${game.team_b} — 兄弟押注局`;
+
+      // Hero
+      document.getElementById('teamA').textContent = game.team_a;
+      document.getElementById('teamB').textContent = game.team_b;
+
+      // Odds panels
+      document.getElementById('oddsTeamA').textContent = game.team_a;
+      document.getElementById('oddsTeamB').textContent = game.team_b;
+      document.getElementById('oddsA').textContent = game.odds_a.toFixed(2);
+      document.getElementById('oddsB').textContent = game.odds_b.toFixed(2);
+
+      // Team buttons
+      document.getElementById('btnAName').textContent = game.team_a;
+      document.getElementById('btnBName').textContent = game.team_b;
+      document.getElementById('btnAOdds').textContent = game.odds_a.toFixed(2) + 'x';
+      document.getElementById('btnBOdds').textContent = game.odds_b.toFixed(2) + 'x';
+
+      renderTotals(totals);
+      renderBets(bets, game);
+
+      const isOpen = game.status === 'open' || game.status === 'pending';
+      if (isOpen) {
+        startCountdown(game.deadline);
+        if (myBet) {
+          showMyBet(myBet, game);
+        } else {
+          document.getElementById('betForm').style.display = 'block';
+        }
+      } else if (game.status === 'closed') {
+        showClosed();
+        if (myBet) showMyBet(myBet, game);
+      } else if (game.status === 'settled') {
+        showSettled(game);
+        if (myBet) showMyBet(myBet, game);
+      }
+    }
+
+    function renderTotals(totals) {
+      document.getElementById('poolAmount').textContent = '¥' + totals.pool.toLocaleString();
+      document.getElementById('sumA').textContent = '已投 ¥' + totals.sumA.toLocaleString();
+      document.getElementById('sumB').textContent = '已投 ¥' + totals.sumB.toLocaleString();
+    }
+
+    function renderBets(bets, game) {
+      const el = document.getElementById('betsList');
+      const count = document.getElementById('betsCount');
+      count.textContent = bets.length;
+      if (!bets.length) {
+        el.innerHTML = '<div class="no-bets">暂无投注</div>';
+        return;
+      }
+      el.innerHTML = bets.map(b => {
+        const isA = b.team === 'A';
+        const teamName = isA ? (game || gameData).team_a : (game || gameData).team_b;
+        const tagClass = isA ? 'tag-a' : 'tag-b';
+        return `
+          <div class="bet-row">
+            <div class="bet-player-info">
+              <span class="bet-name">${b.username}</span>
+              <span class="my-bet-team-tag ${tagClass}" style="padding:3px 10px;font-size:12px">${teamName}</span>
+            </div>
+            <span class="bet-amount">¥${b.amount.toLocaleString()}</span>
+          </div>`;
+      }).join('');
+    }
+
+    function showMyBet(myBet, game) {
+      document.getElementById('betForm').style.display = 'none';
+      const card = document.getElementById('myBetCard');
+      card.classList.add('visible');
+      const isA = myBet.team === 'A';
+      const teamName = isA ? game.team_a : game.team_b;
+      const odds = isA ? game.odds_a : game.odds_b;
+      const tag = document.getElementById('myBetTag');
+      tag.textContent = teamName;
+      tag.className = 'my-bet-team-tag ' + (isA ? 'tag-a' : 'tag-b');
+      document.getElementById('myBetAmount').textContent = '¥' + myBet.amount.toLocaleString();
+      document.getElementById('myBetReturn').textContent = '¥' + Math.floor(myBet.amount * odds).toLocaleString();
+    }
+
+    function showClosed() {
+      clearInterval(countdownTimer);
+      document.getElementById('timerSection').innerHTML = '<div class="status-msg">投注已截止，等待比赛结果</div>';
+      document.getElementById('betForm').style.display = 'none';
+    }
+
+    function showSettled(game) {
+      clearInterval(countdownTimer);
+      const winnerName = game.winner === 'A' ? game.team_a : game.team_b;
+      document.getElementById('timerSection').innerHTML = `<div class="status-settled">🏆 ${winnerName} 获胜</div>`;
+      document.getElementById('betForm').style.display = 'none';
+    }
+
+    function startCountdown(deadline) {
+      clearInterval(countdownTimer);
+      function tick() {
+        const diff = new Date(deadline) - new Date();
+        if (diff <= 0) { clearInterval(countdownTimer); showClosed(); return; }
+        const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        const el = document.getElementById('countdown');
+        el.textContent = `${h}:${m}:${s}`;
+        el.className = 'countdown' + (diff < 300000 ? ' urgent' : '');
+      }
+      tick();
+      countdownTimer = setInterval(tick, 1000);
+    }
+
+    function selectTeam(team) {
+      selectedTeam = team;
+      document.getElementById('btnA').className = 'team-toggle-btn' + (team === 'A' ? ' sel-a' : '');
+      document.getElementById('btnB').className = 'team-toggle-btn' + (team === 'B' ? ' sel-b' : '');
+      updateExpected();
+    }
+
+    function setAmount(fraction) {
+      document.getElementById('betAmount').value = Math.floor(myUser.balance * fraction);
+      updateExpected();
+    }
+
+    function updateExpected() {
+      const amt = parseInt(document.getElementById('betAmount')?.value);
+      const preview = document.getElementById('payoutPreview');
+      if (!preview) return;
+      if (!selectedTeam || !amt || !gameData || amt <= 0) {
+        preview.classList.remove('visible');
+        return;
+      }
+      const odds = selectedTeam === 'A' ? gameData.odds_a : gameData.odds_b;
+      const payout = Math.floor(amt * odds);
+      const profit = payout - amt;
+      document.getElementById('payoutAmount').textContent = '¥' + payout.toLocaleString();
+      document.getElementById('payoutProfit').textContent = '净赚 +¥' + profit.toLocaleString();
+      preview.classList.add('visible');
+    }
+
+    function placeBet() {
+      const amount = parseInt(document.getElementById('betAmount').value);
+      const errorEl = document.getElementById('betError');
+      errorEl.textContent = '';
+      if (!selectedTeam) { errorEl.textContent = '请先选择投注队伍'; return; }
+      if (!amount || amount <= 0) { errorEl.textContent = '请输入有效金额'; return; }
+
+      const teamName = selectedTeam === 'A' ? gameData.team_a : gameData.team_b;
+      const odds = selectedTeam === 'A' ? gameData.odds_a : gameData.odds_b;
+      const payout = Math.floor(amount * odds);
+
+      document.getElementById('confirmText').textContent = `${teamName}  ¥${amount.toLocaleString()}`;
+      document.getElementById('confirmReturn').textContent = `若获胜可得 ¥${payout.toLocaleString()}（赔率 ${odds.toFixed(2)}x）`;
+      document.getElementById('confirmModal').classList.add('open');
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirmModal').classList.remove('open');
+    }
+
+    async function confirmBet() {
+      closeConfirm();
+      const amount = parseInt(document.getElementById('betAmount').value);
+      const btn = document.getElementById('betBtn');
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+
+      const res = await fetch(`/api/game/${gameId}/bet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team: selectedTeam, amount })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        myUser.balance = data.newBalance;
+        document.getElementById('navBalance').textContent = '¥' + data.newBalance.toLocaleString();
+        await loadGame();
+      } else {
+        document.getElementById('betError').textContent = data.error;
+        btn.disabled = false;
+        btn.textContent = '确认投注';
+      }
+    }
+
+    socket.on('betUpdate', ({ bets, totals }) => {
+      renderBets(bets, gameData);
+      renderTotals(totals);
+    });
+
+    socket.on('gameStatusChanged', ({ status, winner }) => {
+      if (status === 'closed') showClosed();
+      if (status === 'settled') showSettled({ ...gameData, winner });
+    });
+
+    init();
+  </script>
+</body>
+</html>

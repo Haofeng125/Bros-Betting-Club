@@ -6,107 +6,94 @@
   <title>管理后台 — 兄弟押注局</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    .tabs { display: flex; gap: 4px; margin-bottom: 24px; }
-    .tab {
-      padding: 10px 20px; border-radius: 8px; cursor: pointer;
-      border: 1px solid var(--border); background: var(--surface);
-      color: var(--text-muted); font-size: 14px; font-family: inherit;
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
     }
-    .tab.active { background: var(--gold); color: #0f0f13; font-weight: 700; border-color: var(--gold); }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th { text-align: left; padding: 10px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); }
-    td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.6); z-index: 100;
-      align-items: center; justify-content: center;
+    .page-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
     }
-    .modal-overlay.open { display: flex; }
-    .modal {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 32px; width: 100%; max-width: 420px;
-    }
-    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
-    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-
-    select {
-      width: 100%; padding: 12px 16px; background: var(--surface2);
-      border: 1px solid var(--border); border-radius: 8px;
-      color: var(--text); font-size: 15px; outline: none;
-      font-family: inherit; cursor: pointer;
-    }
-    select:focus { border-color: var(--gold); }
 
     .status-badge {
-      padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
     }
-    .status-pending { background: #2a2a3e; color: var(--text-muted); }
-    .status-open { background: #1a3a1a; color: var(--green); }
-    .status-settled { background: #1a2a3a; color: #5ab4ff; }
-    .status-voided { background: #3a1a1a; color: var(--red); }
+    .status-open { background: rgba(48,216,123,0.1); color: var(--green); border: 1px solid rgba(48,216,123,0.25); }
+    .status-pending { background: var(--surface3); color: var(--text-muted); border: 1px solid var(--border-bright); }
+    .status-settled { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
+    .status-voided { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+    .status-closed { background: var(--surface3); color: var(--text-muted); border: 1px solid var(--border-bright); }
 
-    .action-btns { display: flex; gap: 8px; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .action-btns { display: flex; gap: 6px; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: var(--radius-sm); margin-top: 0; width: auto; }
 
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .section-title { font-size: 16px; font-weight: 600; }
-
-    .game-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .game-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
     .game-form .full { grid-column: 1 / -1; }
 
-    .loan-tag {
-      font-size: 11px; padding: 2px 8px; border-radius: 10px;
-      background: #3a1a1a; color: var(--red); margin-left: 6px;
+    .odds-preview-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      min-height: 18px;
     }
+    .odds-preview-hint span { color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .loan-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 100px;
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid var(--red-border);
+    }
+
+    .odds-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .odds-chip-a { color: var(--blue); }
+    .odds-chip-b { color: var(--red); }
   </style>
 </head>
 <body>
   <nav class="navbar">
-    <div class="navbar-brand">🏀 兄弟押注局 · 管理后台</div>
+    <div class="navbar-brand">🏀 兄弟押注局</div>
     <div class="navbar-user">
-      <button class="btn btn-ghost" onclick="logout()" style="padding:6px 14px;font-size:13px">退出</button>
+      <a href="/" class="btn btn-ghost">大厅</a>
+      <button class="btn btn-ghost" onclick="logout()">退出</button>
     </div>
   </nav>
 
   <div class="container">
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('players')">玩家管理</button>
-      <button class="tab" onclick="switchTab('games')">比赛管理</button>
-    </div>
-
-    <!-- 玩家管理 -->
-    <div id="tab-players" class="tab-content active">
-      <div class="card">
-        <div class="section-header">
-          <div class="section-title">所有玩家</div>
-          <button class="btn btn-primary" style="width:auto;padding:8px 16px" onclick="openAddPlayer()">+ 添加玩家</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>用户名</th>
-              <th>角色</th>
-              <th>余额</th>
-              <th>欠款</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody id="playersList">
-            <tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:30px">加载中...</td></tr>
-          </tbody>
-        </table>
+    <div class="page-header">
+      <div class="page-title">管理后台</div>
+      <div class="tabs" style="margin-bottom:0">
+        <button class="tab active" onclick="switchTab('games')">比赛</button>
+        <button class="tab" onclick="switchTab('players')">玩家</button>
       </div>
     </div>
 
     <!-- 比赛管理 -->
-    <div id="tab-games" class="tab-content">
+    <div id="tab-games" class="tab-content active">
       <div class="card" style="margin-bottom:16px">
-        <div class="section-title" style="margin-bottom:16px">创建新比赛</div>
+        <div class="section-title" style="margin-bottom:20px">创建新比赛</div>
         <div class="game-form">
           <div class="form-group" style="margin:0">
             <label>主队</label>
@@ -117,16 +104,28 @@
             <input type="text" id="teamB" placeholder="例：勇士">
           </div>
           <div class="form-group" style="margin:0">
+            <label>主队赔率</label>
+            <input type="number" id="oddsA" placeholder="例：1.44" step="0.01" min="1.01" oninput="updateOddsPreview('A')">
+            <div class="odds-preview-hint" id="previewA">投 ¥100 → 赢 <span>—</span></div>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>客队赔率</label>
+            <input type="number" id="oddsB" placeholder="例：2.65" step="0.01" min="1.01" oninput="updateOddsPreview('B')">
+            <div class="odds-preview-hint" id="previewB">投 ¥100 → 赢 <span>—</span></div>
+          </div>
+          <div class="form-group" style="margin:0">
             <label>截止日期</label>
             <input type="date" id="deadlineDate">
           </div>
           <div class="form-group" style="margin:0">
-            <label>截止时间（24小时制，如 19:30）</label>
+            <label>截止时间（24小时制）</label>
             <input type="text" id="deadlineTime" placeholder="HH:MM" maxlength="5">
           </div>
         </div>
-        <button class="btn btn-primary" style="width:auto;padding:10px 24px;margin-top:16px" onclick="createGame()">创建比赛</button>
-        <div class="error-msg" id="gameError"></div>
+        <div style="margin-top:20px;display:flex;align-items:center;gap:12px">
+          <button class="btn btn-primary" style="width:auto;margin-top:0;padding:12px 28px" onclick="createGame()">创建比赛</button>
+          <div class="error-msg" id="gameError" style="margin-top:0"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -135,6 +134,7 @@
           <thead>
             <tr>
               <th>比赛</th>
+              <th>赔率</th>
               <th>截止时间</th>
               <th>状态</th>
               <th>结果</th>
@@ -142,10 +142,58 @@
             </tr>
           </thead>
           <tbody id="gamesList">
-            <tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:30px">加载中...</td></tr>
+            <tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:32px">加载中...</td></tr>
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- 玩家管理 -->
+    <div id="tab-players" class="tab-content">
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title">所有玩家</div>
+          <button class="btn btn-primary" style="width:auto;margin-top:0;padding:9px 18px;font-size:13px" onclick="openAddPlayer()">+ 添加玩家</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>用户名</th>
+              <th>余额</th>
+              <th>欠款</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="playersList">
+            <tr><td colspan="4" style="color:var(--text-muted);text-align:center;padding:32px">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结算 Modal -->
+  <div class="modal-overlay" id="settleModal">
+    <div class="modal">
+      <div class="modal-title">公布比赛结果</div>
+      <p id="settleGameName" style="color:var(--text-muted);margin-bottom:6px;font-size:14px"></p>
+      <p id="settleOddsInfo" style="color:var(--gold);margin-bottom:20px;font-size:13px;font-weight:600"></p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">获胜队伍</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <button class="btn btn-primary" id="settleBtnA" style="margin-top:0;background:var(--blue)" onclick="settle('A')"></button>
+        <button class="btn btn-primary" id="settleBtnB" style="margin-top:0;background:var(--red)" onclick="settle('B')"></button>
+      </div>
+      <div class="error-msg" id="settleError"></div>
+      <button class="btn btn-ghost" style="width:100%;border-radius:var(--radius-sm);margin-top:8px" onclick="closeModal('settleModal')">取消</button>
+    </div>
+  </div>
+
+  <!-- 结算结果 Modal -->
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal" style="max-width:500px;max-height:82vh;overflow-y:auto">
+      <div class="modal-title" id="resultTitle"></div>
+      <div id="resultBody"></div>
+      <button class="btn btn-primary" style="margin-top:20px" onclick="closeModal('resultModal');loadGames();loadPlayers()">完成</button>
     </div>
   </div>
 
@@ -161,24 +209,10 @@
         <label>密码</label>
         <input type="password" id="newPassword" placeholder="至少6位">
       </div>
-      <div class="form-group">
-        <label>角色</label>
-        <select id="newRole">
-          <option value="赌徒">赌徒</option>
-          <option value="嘴硬的数学老师">嘴硬的数学老师</option>
-          <option value="操盘老哥">操盘老哥</option>
-          <option value="怂蛋">怂蛋</option>
-          <option value="变色龙">变色龙</option>
-          <option value="张哥">张哥</option>
-          <option value="种植">种植</option>
-          <option value="哈登球迷">哈登球迷</option>
-          <option value="无角色">无角色</option>
-        </select>
-      </div>
       <div class="error-msg" id="addPlayerError"></div>
       <div class="modal-actions">
-        <button class="btn btn-primary" onclick="addPlayer()">确认添加</button>
-        <button class="btn btn-ghost" onclick="closeModal('addPlayerModal')">取消</button>
+        <button class="btn btn-primary" style="margin-top:0" onclick="addPlayer()">确认添加</button>
+        <button class="btn btn-ghost" style="border-radius:var(--radius-sm)" onclick="closeModal('addPlayerModal')">取消</button>
       </div>
     </div>
   </div>
@@ -186,33 +220,19 @@
   <!-- 编辑玩家 Modal -->
   <div class="modal-overlay" id="editPlayerModal">
     <div class="modal">
-      <div class="modal-title">编辑玩家 · <span id="editUsername"></span></div>
-      <div class="form-group">
-        <label>角色</label>
-        <select id="editRole">
-          <option value="赌徒">赌徒</option>
-          <option value="嘴硬的数学老师">嘴硬的数学老师</option>
-          <option value="操盘老哥">操盘老哥</option>
-          <option value="怂蛋">怂蛋</option>
-          <option value="变色龙">变色龙</option>
-          <option value="张哥">张哥</option>
-          <option value="种植">种植</option>
-          <option value="哈登球迷">哈登球迷</option>
-          <option value="无角色">无角色</option>
-        </select>
-      </div>
+      <div class="modal-title">编辑 · <span id="editUsername"></span></div>
       <div class="form-group">
         <label>余额</label>
-        <input type="number" id="editBalance" placeholder="修改余额">
+        <input type="number" id="editBalance">
       </div>
       <div class="form-group">
-        <label>新密码（不修改请留空）</label>
+        <label>新密码（留空不修改）</label>
         <input type="password" id="editPassword" placeholder="留空则不修改">
       </div>
       <div class="error-msg" id="editPlayerError"></div>
       <div class="modal-actions">
-        <button class="btn btn-primary" onclick="savePlayer()">保存</button>
-        <button class="btn btn-ghost" onclick="closeModal('editPlayerModal')">取消</button>
+        <button class="btn btn-primary" style="margin-top:0" onclick="savePlayer()">保存</button>
+        <button class="btn btn-ghost" style="border-radius:var(--radius-sm)" onclick="closeModal('editPlayerModal')">取消</button>
       </div>
     </div>
   </div>
@@ -223,122 +243,23 @@
     async function init() {
       const res = await fetch('/api/auth/me');
       const user = await res.json();
-      if (!user.loggedIn || !user.is_admin) {
-        window.location.href = '/login.html';
-        return;
-      }
-      loadPlayers();
+      if (!user.loggedIn || !user.is_admin) { window.location.href = '/login.html'; return; }
       loadGames();
+      loadPlayers();
     }
 
     function switchTab(name) {
       document.querySelectorAll('.tab').forEach((t, i) => {
-        t.classList.toggle('active', ['players','games'][i] === name);
+        t.classList.toggle('active', ['games','players'][i] === name);
       });
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.getElementById('tab-' + name).classList.add('active');
     }
 
-    // ── 玩家 ──
-
-    async function loadPlayers() {
-      const res = await fetch('/api/admin/users');
-      const users = await res.json();
-      const tbody = document.getElementById('playersList');
-      if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:30px">暂无玩家</td></tr>';
-        return;
-      }
-      tbody.innerHTML = users.map(u => `
-        <tr>
-          <td><strong>${u.username}</strong>${u.is_admin ? ' <span style="color:var(--gold);font-size:11px">管理员</span>' : ''}</td>
-          <td><span class="role-badge">${u.role}</span></td>
-          <td style="color:var(--gold)">¥${u.balance.toLocaleString()}</td>
-          <td>${u.loan_amount > 0 ? `<span class="loan-tag">欠款 ¥${u.loan_amount.toLocaleString()}</span>` : '—'}</td>
-          <td>
-            ${!u.is_admin ? `
-            <div class="action-btns">
-              <button class="btn btn-ghost btn-sm" onclick="openEditPlayer(${u.id}, '${u.username}', '${u.role}', ${u.balance})">编辑</button>
-              <button class="btn btn-danger btn-sm" onclick="deletePlayer(${u.id}, '${u.username}')">删除</button>
-            </div>` : '—'}
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function openAddPlayer() {
-      document.getElementById('newUsername').value = '';
-      document.getElementById('newPassword').value = '';
-      document.getElementById('newRole').value = '赌徒';
-      document.getElementById('addPlayerError').textContent = '';
-      document.getElementById('addPlayerModal').classList.add('open');
-    }
-
-    async function addPlayer() {
-      const username = document.getElementById('newUsername').value.trim();
-      const password = document.getElementById('newPassword').value;
-      const role = document.getElementById('newRole').value;
-      const errorEl = document.getElementById('addPlayerError');
-
-      if (!username || !password) { errorEl.textContent = '请填写完整信息'; return; }
-      if (password.length < 6) { errorEl.textContent = '密码至少6位'; return; }
-
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, role })
-      });
-      const data = await res.json();
-      if (data.success) {
-        closeModal('addPlayerModal');
-        loadPlayers();
-      } else {
-        errorEl.textContent = data.error;
-      }
-    }
-
-    function openEditPlayer(id, username, role, balance) {
-      editingUserId = id;
-      document.getElementById('editUsername').textContent = username;
-      document.getElementById('editRole').value = role;
-      document.getElementById('editBalance').value = balance;
-      document.getElementById('editPassword').value = '';
-      document.getElementById('editPlayerError').textContent = '';
-      document.getElementById('editPlayerModal').classList.add('open');
-    }
-
-    async function savePlayer() {
-      const role = document.getElementById('editRole').value;
-      const balance = document.getElementById('editBalance').value;
-      const password = document.getElementById('editPassword').value;
-      const errorEl = document.getElementById('editPlayerError');
-
-      const body = { role, balance };
-      if (password) {
-        if (password.length < 6) { errorEl.textContent = '密码至少6位'; return; }
-        body.password = password;
-      }
-
-      const res = await fetch(`/api/admin/users/${editingUserId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (data.success) {
-        closeModal('editPlayerModal');
-        loadPlayers();
-      } else {
-        errorEl.textContent = data.error;
-      }
-    }
-
-    async function deletePlayer(id, username) {
-      if (!confirm(`确定要删除玩家「${username}」吗？此操作不可恢复。`)) return;
-      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) loadPlayers();
-      else alert(data.error);
+    function updateOddsPreview(side) {
+      const val = parseFloat(document.getElementById('odds' + side).value);
+      const el = document.getElementById('preview' + side).querySelector('span');
+      el.textContent = val > 1 ? '¥' + Math.floor(100 * val) : '—';
     }
 
     // ── 比赛 ──
@@ -348,19 +269,35 @@
       const games = await res.json();
       const tbody = document.getElementById('gamesList');
       if (!games.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:30px">暂无比赛记录</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:32px">暂无比赛记录</td></tr>';
         return;
       }
       const statusMap = { pending:'待开始', open:'投注中', closed:'已截止', settled:'已结算', voided:'已作废' };
-      const statusClass = { pending:'status-pending', open:'status-open', closed:'status-pending', settled:'status-settled', voided:'status-voided' };
+      const statusCls = { pending:'status-pending', open:'status-open', closed:'status-closed', settled:'status-settled', voided:'status-voided' };
       tbody.innerHTML = games.map(g => `
         <tr>
-          <td><strong>${g.team_a} vs ${g.team_b}</strong></td>
-          <td style="color:var(--text-muted);font-size:13px">${formatDate(g.deadline)}</td>
-          <td><span class="status-badge ${statusClass[g.status]}">${statusMap[g.status]}</span></td>
-          <td>${g.winner ? `<span style="color:var(--gold)">${g.winner === 'A' ? g.team_a : g.team_b} 胜</span>` : '—'}</td>
           <td>
-            ${g.status !== 'settled' ? `<button class="btn btn-danger btn-sm" onclick="deleteGame(${g.id})">删除</button>` : '—'}
+            ${['settled','voided'].includes(g.status)
+              ? `<a href="/history/${g.id}" style="color:var(--text);text-decoration:none;font-weight:700">${g.team_a} vs ${g.team_b} <span style="color:var(--gold);font-size:11px">↗</span></a>`
+              : `<strong>${g.team_a} vs ${g.team_b}</strong>`}
+          </td>
+          <td>
+            <span class="odds-chip odds-chip-a">${g.odds_a ? g.odds_a.toFixed(2) : '—'}x</span>
+            <span style="color:var(--border-bright);margin:0 4px">/</span>
+            <span class="odds-chip odds-chip-b">${g.odds_b ? g.odds_b.toFixed(2) : '—'}x</span>
+          </td>
+          <td style="color:var(--text-muted);font-size:13px">${formatDate(g.deadline)}</td>
+          <td><span class="status-badge ${statusCls[g.status]}">${statusMap[g.status]}</span></td>
+          <td style="color:var(--gold);font-size:13px;font-weight:600">${g.winner ? (g.winner === 'A' ? g.team_a : g.team_b) + ' 胜' : '—'}</td>
+          <td>
+            <div class="action-btns">
+              ${['open','pending','closed'].includes(g.status)
+                ? `<button class="btn btn-primary btn-sm" onclick="openSettle(${g.id},'${g.team_a}','${g.team_b}',${g.odds_a},${g.odds_b})">公布结果</button>`
+                : ''}
+              ${!['settled','voided'].includes(g.status)
+                ? `<button class="btn btn-danger btn-sm" onclick="deleteGame(${g.id})">删除</button>`
+                : ''}
+            </div>
           </td>
         </tr>
       `).join('');
@@ -369,27 +306,33 @@
     async function createGame() {
       const team_a = document.getElementById('teamA').value.trim();
       const team_b = document.getElementById('teamB').value.trim();
+      const odds_a = document.getElementById('oddsA').value;
+      const odds_b = document.getElementById('oddsB').value;
       const deadlineDate = document.getElementById('deadlineDate').value;
       const deadlineTime = document.getElementById('deadlineTime').value;
-      const deadline = deadlineDate && deadlineTime ? `${deadlineDate}T${deadlineTime}` : '';
       const errorEl = document.getElementById('gameError');
 
-      const timeValid = /^([01]\d|2[0-3]):([0-5]\d)$/.test(deadlineTime);
-      if (!team_a || !team_b || !deadlineDate || !deadlineTime) { errorEl.textContent = '请填写完整比赛信息'; return; }
-      if (!timeValid) { errorEl.textContent = '时间格式错误，请输入 00:00 ~ 23:59'; return; }
+      if (!team_a || !team_b || !odds_a || !odds_b || !deadlineDate || !deadlineTime) {
+        errorEl.textContent = '请填写完整信息'; return;
+      }
+      if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(deadlineTime)) {
+        errorEl.textContent = '时间格式错误，请输入 00:00 ~ 23:59'; return;
+      }
+      if (parseFloat(odds_a) <= 1.0 || parseFloat(odds_b) <= 1.0) {
+        errorEl.textContent = '赔率必须大于 1.0'; return;
+      }
+      const deadline = `${deadlineDate}T${deadlineTime}`;
       if (new Date(deadline) <= new Date()) { errorEl.textContent = '截止时间必须晚于当前时间'; return; }
 
       const res = await fetch('/api/admin/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team_a, team_b, deadline })
+        body: JSON.stringify({ team_a, team_b, deadline, odds_a, odds_b })
       });
       const data = await res.json();
       if (data.success) {
-        document.getElementById('teamA').value = '';
-        document.getElementById('teamB').value = '';
-        document.getElementById('deadlineDate').value = '';
-        document.getElementById('deadlineTime').value = '';
+        ['teamA','teamB','oddsA','oddsB','deadlineDate','deadlineTime'].forEach(id => document.getElementById(id).value = '');
+        document.querySelectorAll('.odds-preview-hint span').forEach(s => s.textContent = '—');
         errorEl.textContent = '';
         loadGames();
       } else {
@@ -405,20 +348,148 @@
       else alert(data.error);
     }
 
-    // ── 工具 ──
+    // ── 结算 ──
+
+    let settlingGameId = null;
+
+    function openSettle(id, teamA, teamB, oddsA, oddsB) {
+      settlingGameId = id;
+      document.getElementById('settleGameName').textContent = `${teamA} vs ${teamB}`;
+      document.getElementById('settleOddsInfo').textContent = `${teamA} ${oddsA.toFixed(2)}x  ·  ${teamB} ${oddsB.toFixed(2)}x`;
+      document.getElementById('settleBtnA').textContent = `🏆 ${teamA}`;
+      document.getElementById('settleBtnB').textContent = `🏆 ${teamB}`;
+      document.getElementById('settleError').textContent = '';
+      document.getElementById('settleModal').classList.add('open');
+    }
+
+    async function settle(winner) {
+      const errorEl = document.getElementById('settleError');
+      const res = await fetch(`/api/admin/games/${settlingGameId}/settle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ winner })
+      });
+      const data = await res.json();
+      if (!data.success) { errorEl.textContent = data.error; return; }
+
+      closeModal('settleModal');
+
+      if (data.voided) {
+        document.getElementById('resultTitle').textContent = '⚠️ 比赛已作废';
+        document.getElementById('resultBody').innerHTML = `<p style="color:var(--text-muted);padding:8px 0">本场无人投注，已作废。</p>`;
+      } else {
+        const typeColor = { '获胜': 'var(--green)', '落败': 'var(--red)' };
+        document.getElementById('resultTitle').textContent = `🏆 ${data.winnerName} 获胜`;
+        document.getElementById('resultBody').innerHTML = `
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">A队 ${data.oddsA.toFixed(2)}x &nbsp;·&nbsp; B队 ${data.oddsB.toFixed(2)}x</p>
+          ${data.results.map(r => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);font-size:14px">
+              <span style="font-weight:600">${r.username} <span style="color:var(--text-muted);font-weight:400;font-size:12px">${r.type}</span></span>
+              <span style="font-weight:700;color:${typeColor[r.type] || 'var(--text)'}">
+                ${r.type === '获胜' ? `+¥${r.amount.toLocaleString()}` : r.type === '落败' ? `-¥${Math.abs(r.profit).toLocaleString()}` : ''}
+              </span>
+            </div>
+          `).join('')}`;
+      }
+      document.getElementById('resultModal').classList.add('open');
+    }
+
+    // ── 玩家 ──
+
+    async function loadPlayers() {
+      const res = await fetch('/api/admin/users');
+      const users = await res.json();
+      const tbody = document.getElementById('playersList');
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted);text-align:center;padding:32px">暂无玩家</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td><strong>${u.username}</strong>${u.is_admin ? ' <span style="color:var(--gold);font-size:11px;font-weight:600">管理员</span>' : ''}</td>
+          <td style="color:var(--gold);font-weight:700;font-variant-numeric:tabular-nums">¥${u.balance.toLocaleString()}</td>
+          <td>${u.loan_amount > 0 ? `<span class="loan-tag">欠 ¥${u.loan_amount.toLocaleString()}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn btn-ghost btn-sm" onclick="openEditPlayer(${u.id},'${u.username}',${u.balance})">编辑</button>
+              ${!u.is_admin ? `<button class="btn btn-danger btn-sm" onclick="deletePlayer(${u.id},'${u.username}')">删除</button>` : ''}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openAddPlayer() {
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('addPlayerError').textContent = '';
+      document.getElementById('addPlayerModal').classList.add('open');
+    }
+
+    async function addPlayer() {
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value;
+      const errorEl = document.getElementById('addPlayerError');
+      if (!username || !password) { errorEl.textContent = '请填写完整信息'; return; }
+      if (password.length < 6) { errorEl.textContent = '密码至少6位'; return; }
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.success) { closeModal('addPlayerModal'); loadPlayers(); }
+      else errorEl.textContent = data.error;
+    }
+
+    function openEditPlayer(id, username, balance) {
+      editingUserId = id;
+      document.getElementById('editUsername').textContent = username;
+      document.getElementById('editBalance').value = balance;
+      document.getElementById('editPassword').value = '';
+      document.getElementById('editPlayerError').textContent = '';
+      document.getElementById('editPlayerModal').classList.add('open');
+    }
+
+    async function savePlayer() {
+      const balance = document.getElementById('editBalance').value;
+      const password = document.getElementById('editPassword').value;
+      const errorEl = document.getElementById('editPlayerError');
+      const body = { balance };
+      if (password) {
+        if (password.length < 6) { errorEl.textContent = '密码至少6位'; return; }
+        body.password = password;
+      }
+      const res = await fetch(`/api/admin/users/${editingUserId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.success) { closeModal('editPlayerModal'); loadPlayers(); }
+      else errorEl.textContent = data.error;
+    }
+
+    async function deletePlayer(id, username) {
+      if (!confirm(`确定要删除玩家「${username}」吗？`)) return;
+      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) loadPlayers();
+      else alert(data.error);
+    }
+
+    // ── Utils ──
+
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
 
     function formatDate(str) {
       const d = new Date(str);
       return `${d.getMonth()+1}月${d.getDate()}日 ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
     }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.remove('open');
-    }
-
-    document.querySelectorAll('.modal-overlay').forEach(el => {
-      el.addEventListener('click', (e) => { if (e.target === el) el.classList.remove('open'); });
-    });
 
     async function logout() {
       await fetch('/api/auth/logout', { method: 'POST' });

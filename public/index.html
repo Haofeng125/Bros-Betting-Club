@@ -5,24 +5,199 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>兄弟押注局</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .lobby-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .lobby-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    /* ── Game Card ── */
+    .game-card {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0;
+      margin-bottom: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      overflow: hidden;
+    }
+    .game-card:hover {
+      border-color: var(--gold-border);
+      box-shadow: 0 0 0 1px var(--gold-border), 0 4px 24px rgba(0,0,0,0.3);
+    }
+
+    .game-card-top {
+      padding: 20px 22px 18px;
+    }
+
+    .game-card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .game-deadline {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .game-teams {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 0;
+    }
+
+    .game-team {
+      flex: 1;
+      text-align: center;
+    }
+
+    .game-team-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    .game-team-odds {
+      font-size: 26px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .team-a .game-team-odds { color: var(--blue); }
+    .team-b .game-team-odds { color: var(--red); }
+
+    .game-team-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 2px;
+      letter-spacing: 0.3px;
+    }
+
+    .game-vs-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px;
+      gap: 6px;
+    }
+
+    .vs-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .game-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 22px;
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* History cards */
+    .history-card {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-bottom: 10px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color var(--transition);
+    }
+    .history-card:hover { border-color: var(--border-bright); }
+    .history-card.voided { opacity: 0.55; }
+
+    .history-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .history-teams {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .history-teams .winner-team { color: var(--gold); }
+
+    .history-vs {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .history-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .history-date { font-size: 12px; color: var(--text-muted); }
+    .history-cta { font-size: 12px; color: var(--text-muted); }
+  </style>
 </head>
 <body>
   <nav class="navbar">
     <div class="navbar-brand">🏀 兄弟押注局</div>
     <div class="navbar-user">
-      <span id="navRole" class="role-badge">加载中...</span>
-      <span>余额：<span class="navbar-balance" id="navBalance">--</span></span>
-      <span id="navUsername" style="color: var(--text)">--</span>
-      <button class="btn btn-ghost" onclick="logout()" style="padding: 6px 14px; font-size:13px">退出</button>
+      <a href="/me" class="btn btn-ghost">我的</a>
+      <a href="/leaderboard" class="btn btn-ghost">排行榜</a>
+      <a href="/intro" class="btn btn-ghost">规则</a>
+      <span>余额 <span class="navbar-balance" id="navBalance">--</span></span>
+      <span class="nav-username" id="navUsername">--</span>
+      <a id="adminBtn" href="/admin" class="btn btn-ghost" style="display:none">后台</a>
+      <button class="btn btn-ghost" onclick="logout()">退出</button>
     </div>
   </nav>
 
   <div class="container">
-    <div class="card">
-      <div class="card-title">今日比赛</div>
-      <div class="empty-state">
-        <div class="icon">🏀</div>
-        <p>今日暂无比赛，好好休息</p>
+    <div class="lobby-header">
+      <div class="tabs" style="margin-bottom:0">
+        <button class="tab active" onclick="switchTab('active')">进行中</button>
+        <button class="tab" onclick="switchTab('history')">历史记录</button>
+      </div>
+    </div>
+
+    <div id="tab-active" class="tab-content active">
+      <div id="activeGames">
+        <div class="empty-state"><div class="icon">🏀</div><p>暂无进行中的比赛</p></div>
+      </div>
+    </div>
+
+    <div id="tab-history" class="tab-content">
+      <div id="historyGames">
+        <div class="empty-state"><div class="icon">📋</div><p>暂无历史记录</p></div>
       </div>
     </div>
   </div>
@@ -31,13 +206,98 @@
     async function init() {
       const res = await fetch('/api/auth/me');
       const user = await res.json();
-      if (!user.loggedIn) {
-        window.location.href = '/login.html';
-        return;
-      }
+      if (!user.loggedIn) { window.location.href = '/login.html'; return; }
       document.getElementById('navUsername').textContent = user.username;
       document.getElementById('navBalance').textContent = '¥' + user.balance.toLocaleString();
-      document.getElementById('navRole').textContent = user.role;
+      if (user.is_admin) document.getElementById('adminBtn').style.display = 'inline-flex';
+      loadActive();
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', ['active','history'][i] === name);
+      });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      if (name === 'history') loadHistory();
+    }
+
+    async function loadActive() {
+      const res = await fetch('/api/game');
+      const games = await res.json();
+      const el = document.getElementById('activeGames');
+      if (!games.length) {
+        el.innerHTML = '<div class="empty-state"><div class="icon">🏀</div><p>暂无进行中的比赛，等待管理员开局</p></div>';
+        return;
+      }
+      el.innerHTML = games.map(g => `
+        <a class="game-card" href="/game/${g.id}">
+          <div class="game-card-top">
+            <div class="game-card-meta">
+              <span class="badge badge-live">投注中</span>
+              <span class="game-deadline">截止 ${formatDate(g.deadline)}</span>
+            </div>
+            <div class="game-teams">
+              <div class="game-team team-a">
+                <div class="game-team-name">${g.team_a}</div>
+                <div class="game-team-odds">${g.odds_a.toFixed(2)}</div>
+                <div class="game-team-label">赔率</div>
+              </div>
+              <div class="game-vs-col">
+                <div class="vs-text">VS</div>
+              </div>
+              <div class="game-team team-b">
+                <div class="game-team-name">${g.team_b}</div>
+                <div class="game-team-odds">${g.odds_b.toFixed(2)}</div>
+                <div class="game-team-label">赔率</div>
+              </div>
+            </div>
+          </div>
+          <div class="game-card-footer">
+            <span class="footer-hint">点击进入投注</span>
+            <span style="color:var(--gold);font-size:13px;font-weight:600">→</span>
+          </div>
+        </a>
+      `).join('');
+    }
+
+    async function loadHistory() {
+      const res = await fetch('/api/game/history');
+      const games = await res.json();
+      const el = document.getElementById('historyGames');
+      if (!games.length) {
+        el.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>暂无历史记录</p></div>';
+        return;
+      }
+      el.innerHTML = games.map(g => {
+        const isVoided = g.status === 'voided';
+        const winnerSide = g.winner;
+        return `
+          <a class="history-card ${isVoided ? 'voided' : ''}" href="/history/${g.id}">
+            <div class="history-top">
+              <div class="history-teams">
+                <span class="${winnerSide === 'A' ? 'winner-team' : ''}">${g.team_a}</span>
+                <span class="history-vs">VS</span>
+                <span class="${winnerSide === 'B' ? 'winner-team' : ''}">${g.team_b}</span>
+              </div>
+              ${isVoided
+                ? `<span class="badge badge-voided">已作废</span>`
+                : winnerSide
+                  ? `<span class="badge badge-settled">🏆 ${winnerSide === 'A' ? g.team_a : g.team_b}</span>`
+                  : `<span class="badge badge-closed">已截止</span>`}
+            </div>
+            <div class="history-bottom">
+              <span class="history-date">${formatDate(g.deadline)}</span>
+              <span class="history-cta">查看详情 →</span>
+            </div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    function formatDate(str) {
+      const d = new Date(str);
+      return `${d.getMonth()+1}月${d.getDate()}日 ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
     }
 
     async function logout() {
