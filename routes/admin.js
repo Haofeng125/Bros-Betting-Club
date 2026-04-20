@@ -140,9 +140,11 @@ module.exports = (JWT_SECRET, io) => {
         const won = bet.team === winner;
         if (won) {
           const payout = Math.floor(bet.amount * winningOdds);
-          db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(payout, bet.user_id);
-          results.push({ username: bet.username, type: '获胜', amount: payout, profit: payout - bet.amount });
+          const profit = payout - bet.amount;
+          db.prepare('UPDATE users SET balance = balance + ?, weekly_profit = weekly_profit + ? WHERE id = ?').run(payout, profit, bet.user_id);
+          results.push({ username: bet.username, type: '获胜', amount: payout, profit });
         } else {
+          db.prepare('UPDATE users SET weekly_profit = weekly_profit - ? WHERE id = ?').run(bet.amount, bet.user_id);
           results.push({ username: bet.username, type: '落败', profit: -bet.amount });
         }
       }

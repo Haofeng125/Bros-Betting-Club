@@ -124,6 +124,25 @@ io.on('connection', (socket) => {
 const gameRoutes = require('./routes/game');
 app.use('/api/game', gameRoutes(JWT_SECRET, io));
 
+// ── Weekly profit reset (every Monday 00:00) ──
+
+function scheduleWeeklyReset() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7 || 7));
+  next.setHours(0, 0, 0, 0);
+  const msUntil = next - now;
+  setTimeout(() => {
+    db.prepare('UPDATE users SET weekly_profit = 0').run();
+    console.log('每周收益已重置');
+    setInterval(() => {
+      db.prepare('UPDATE users SET weekly_profit = 0').run();
+      console.log('每周收益已重置');
+    }, 7 * 24 * 60 * 60 * 1000);
+  }, msUntil);
+}
+scheduleWeeklyReset();
+
 // ── Auto-close games past deadline ──
 
 function closeExpiredGames() {

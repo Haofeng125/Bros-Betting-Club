@@ -82,13 +82,25 @@ module.exports = (JWT_SECRET) => {
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     try { jwt.verify(token, JWT_SECRET); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
 
-    const users = db.prepare('SELECT id, username, balance, loan_amount FROM users ORDER BY balance DESC').all();
+    const users = db.prepare(`
+      SELECT u.id, u.username, u.balance, u.loan_amount, u.weekly_profit,
+             u.balance + COALESCE(SUM(
+               CASE WHEN b.status = 'active' AND g.status NOT IN ('settled','voided') THEN b.amount ELSE 0 END
+             ), 0) AS total_wealth
+      FROM users u
+      LEFT JOIN bets b ON b.user_id = u.id
+      LEFT JOIN games g ON b.game_id = g.id
+      GROUP BY u.id
+    `).all();
+
     const collator = new Intl.Collator('zh-CN', { sensitivity: 'base' });
-    users.sort((a, b) => {
-      if (b.balance !== a.balance) return b.balance - a.balance;
-      return collator.compare(a.username[0] || '', b.username[0] || '');
-    });
-    res.json(users);
+    const tieBreak = (a, b) => collator.compare(a.username[0] || '', b.username[0] || '');
+
+    const byBalance = [...users].sort((a, b) => b.balance !== a.balance ? b.balance - a.balance : tieBreak(a, b));
+    const byWealth  = [...users].sort((a, b) => b.total_wealth !== a.total_wealth ? b.total_wealth - a.total_wealth : tieBreak(a, b));
+    const byWeekly  = [...users].sort((a, b) => b.weekly_profit !== a.weekly_profit ? b.weekly_profit - a.weekly_profit : tieBreak(a, b));
+
+    res.json({ byBalance, byWealth, byWeekly });
   });
 
   router.get('/me', (req, res) => {

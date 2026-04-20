@@ -22,11 +22,17 @@ module.exports = (JWT_SECRET) => {
     res.json(user);
   });
 
-  // POST borrow 5000 — only allowed if balance < 100
+  // POST borrow 5000 — only allowed if balance + pending bets < 100
   router.post('/borrow', requireAuth, (req, res) => {
     const user = db.prepare('SELECT balance, loan_amount FROM users WHERE id = ?').get(req.user.id);
+    const pending = db.prepare(`
+      SELECT COALESCE(SUM(b.amount), 0) as total
+      FROM bets b JOIN games g ON b.game_id = g.id
+      WHERE b.user_id = ? AND b.status = 'active' AND g.status NOT IN ('settled', 'voided')
+    `).get(req.user.id);
+    const effectiveBalance = user.balance + pending.total;
 
-    if (user.balance >= 100)
+    if (effectiveBalance >= 100)
       return res.json({ success: false, error: '余额不低于 ¥100，暂不符合借款条件' });
 
     db.prepare('UPDATE users SET balance = balance + 5000, loan_amount = loan_amount + 5000 WHERE id = ?').run(req.user.id);

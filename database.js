@@ -44,6 +44,7 @@ db.exec(`
 // Migrations for existing databases
 try { db.exec(`ALTER TABLE games ADD COLUMN odds_a REAL DEFAULT 1.0`); } catch (_) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN odds_b REAL DEFAULT 1.0`); } catch (_) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN weekly_profit INTEGER NOT NULL DEFAULT 0`); } catch (_) {}
 
 // Rename legacy admin username
 try { db.prepare(`UPDATE users SET username = '宋昊峰' WHERE username = 'admin' AND is_admin = 1`).run(); } catch (_) {}
