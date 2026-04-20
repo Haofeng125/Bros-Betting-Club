@@ -23,16 +23,16 @@ app.use(express.json());
 app.use(cookieParser());
 
 // ── Rate limiting ──
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
   max: 20,
-  message: { error: '请求过于频繁，请 15 分钟后再试' },
+  message: { success: false, error: '请求过于频繁，请 15 分钟后再试' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 const betLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10,
+  windowMs: 60 * 1000,
+  max: 30,
   message: { error: '操作过于频繁，请稍后再试' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -66,7 +66,7 @@ function requireAdmin(req, res, next) {
 
 // ── API routes ──
 
-app.use('/api/auth', authLimiter, authRoutes(JWT_SECRET));
+app.use('/api/auth', authRoutes(JWT_SECRET, loginLimiter));
 app.use('/api/admin', adminRoutes(JWT_SECRET, io));
 app.use('/api/loan', betLimiter, require('./routes/loan')(JWT_SECRET));
 

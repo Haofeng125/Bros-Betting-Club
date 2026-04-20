@@ -3,12 +3,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
 
-module.exports = (JWT_SECRET) => {
+module.exports = (JWT_SECRET, loginLimiter) => {
   const router = express.Router();
 
   const REFERRAL_CODE = '302';
 
-  router.post('/register', (req, res) => {
+  router.post('/register', loginLimiter, (req, res) => {
     const { username, password, referral } = req.body;
     if (!username || !password || !referral)
       return res.json({ success: false, error: '请填写所有字段' });
@@ -28,7 +28,7 @@ module.exports = (JWT_SECRET) => {
     res.json({ success: true });
   });
 
-  router.post('/login', (req, res) => {
+  router.post('/login', loginLimiter, (req, res) => {
     const { username, password } = req.body;
     if (!username || !password)
       return res.json({ success: false, error: '请输入用户名和密码' });
