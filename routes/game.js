@@ -131,6 +131,12 @@ module.exports = (JWT_SECRET, io) => {
     if (user.balance < amt)
       return res.json({ success: false, error: `余额不足（当前余额 ¥${user.balance.toLocaleString()}）` });
 
+    if (user.loan_amount > 0) {
+      const maxBet = Math.floor(user.balance * 0.5);
+      if (amt > maxBet)
+        return res.json({ success: false, error: `有未还债务，单次投注不可超过余额的 50%（最多 ¥${maxBet.toLocaleString()}）` });
+    }
+
     db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(amt, userId);
     db.prepare('INSERT INTO bets (game_id, user_id, team, amount) VALUES (?, ?, ?, ?)').run(gameId, userId, team, amt);
 

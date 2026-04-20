@@ -49,6 +49,7 @@ function requireAdmin(req, res, next) {
 
 app.use('/api/auth', authRoutes(JWT_SECRET));
 app.use('/api/admin', adminRoutes(JWT_SECRET, io));
+app.use('/api/loan', require('./routes/loan')(JWT_SECRET));
 
 // ── Page routes ──
 
@@ -82,6 +83,10 @@ app.get('/leaderboard', requireAuth, (req, res) => {
 
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+app.get('/loan', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'loan.html'));
 });
 
 app.get('/my-history', requireAuth, (req, res) => {

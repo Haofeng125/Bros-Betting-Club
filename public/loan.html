@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>贷款 — 兄弟押注局</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .loan-hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      margin-bottom: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .loan-stat {
+      text-align: center;
+      padding: 16px;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+    }
+
+    .loan-stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 10px;
+    }
+
+    .loan-stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.5px;
+    }
+
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 4px;
+      gap: 2px;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 16px;
+      border-radius: var(--radius-pill);
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--transition);
+      text-align: center;
+    }
+    .tab-btn.active { background: var(--gold); color: #09090f; }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .loan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+    }
+
+    .loan-card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+
+    .loan-card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .loan-msg {
+      font-size: 13px;
+      text-align: center;
+      min-height: 20px;
+      margin-top: 12px;
+    }
+
+    .rule-item {
+      display: flex;
+      gap: 14px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .rule-item:last-child { border-bottom: none; }
+
+    .rule-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .rule-body-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .rule-body-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .highlight { color: var(--gold); font-weight: 600; }
+
+    .eligibility-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .eligible { background: var(--green-dim); color: var(--green); border: 1px solid rgba(48,216,123,0.25); }
+    .ineligible { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a href="/" style="color:var(--gold);text-decoration:none;font-size:14px;font-weight:600">← 大厅</a>
+    </div>
+    <div class="navbar-user">
+      <span class="nav-username" id="navUsername">--</span>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:560px">
+
+    <!-- Balance & Debt hero -->
+    <div class="loan-hero">
+      <div class="loan-stat">
+        <div class="loan-stat-label">当前余额</div>
+        <div class="loan-stat-val" style="color:var(--gold)" id="heroBalance">--</div>
+      </div>
+      <div class="loan-stat">
+        <div class="loan-stat-label">未还欠款</div>
+        <div class="loan-stat-val" id="heroLoan" style="color:var(--text-muted)">--</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('borrow')">借款</button>
+      <button class="tab-btn" onclick="switchTab('repay')">还款</button>
+      <button class="tab-btn" onclick="switchTab('rules')">规则</button>
+    </div>
+
+    <!-- 借款 -->
+    <div id="tab-borrow" class="tab-content active">
+      <div class="loan-card">
+        <div class="loan-card-title">💸 申请借款</div>
+        <div class="loan-card-desc">余额低于 ¥100 时，可向银行借款 ¥5,000。借款后欠款记录增加，还清前每场投注不可超过余额的 50%。</div>
+        <div id="borrowBadge"></div>
+        <button class="btn btn-primary" id="borrowBtn" onclick="borrow()">借款 ¥5,000</button>
+        <div class="loan-msg" id="borrowMsg"></div>
+      </div>
+    </div>
+
+    <!-- 还款 -->
+    <div id="tab-repay" class="tab-content">
+      <div class="loan-card">
+        <div class="loan-card-title">💰 偿还欠款</div>
+        <div class="loan-card-desc">输入还款金额，从余额中扣除并减少欠款记录。可分多次还款。</div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label>还款金额</label>
+          <input type="number" id="repayAmount" placeholder="输入金额" min="1">
+        </div>
+        <button class="btn btn-primary" id="repayBtn" onclick="repay()">确认还款</button>
+        <div class="loan-msg" id="repayMsg"></div>
+      </div>
+    </div>
+
+    <!-- 规则 -->
+    <div id="tab-rules" class="tab-content">
+      <div class="loan-card">
+        <div class="rule-item">
+          <div class="rule-icon">📉</div>
+          <div>
+            <div class="rule-body-title">借款条件</div>
+            <div class="rule-body-text">余额低于 <span class="highlight">¥100</span> 时，可向银行申请借款 <span class="highlight">¥5,000</span>。可多次借款，每次借 ¥5,000。</div>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-icon">⚠️</div>
+          <div>
+            <div class="rule-body-title">投注限制</div>
+            <div class="rule-body-text">有未还欠款时，每场投注金额不可超过当前余额的 <span class="highlight">50%</span>，直到还清所有债务为止。</div>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-icon">💳</div>
+          <div>
+            <div class="rule-body-title">还款方式</div>
+            <div class="rule-body-text">可随时在「还款」页面偿还任意金额，分多次还款也没问题。还清后投注限制立即解除。</div>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-icon">🏦</div>
+          <div>
+            <div class="rule-body-title">利息</div>
+            <div class="rule-body-text">本借款系统为<span class="highlight">无息贷款</span>，借多少还多少，不收任何利息。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let state = { balance: 0, loan_amount: 0 };
+
+    async function init() {
+      const meRes = await fetch('/api/auth/me');
+      const me = await meRes.json();
+      if (!me.loggedIn) { window.location.href = '/login.html'; return; }
+      document.getElementById('navUsername').textContent = me.username;
+
+      await refreshStatus();
+    }
+
+    async function refreshStatus() {
+      const res = await fetch('/api/loan/status');
+      const data = await res.json();
+      state = data;
+      updateHero();
+      updateBorrowBadge();
+    }
+
+    function updateHero() {
+      document.getElementById('heroBalance').textContent = '¥' + state.balance.toLocaleString();
+      const loanEl = document.getElementById('heroLoan');
+      loanEl.textContent = '¥' + state.loan_amount.toLocaleString();
+      loanEl.style.color = state.loan_amount > 0 ? 'var(--red)' : 'var(--text-muted)';
+    }
+
+    function updateBorrowBadge() {
+      const badge = document.getElementById('borrowBadge');
+      const btn = document.getElementById('borrowBtn');
+      if (state.balance < 100) {
+        badge.innerHTML = `<div class="eligibility-badge eligible">✓ &nbsp;符合借款条件</div>`;
+        btn.disabled = false;
+      } else {
+        badge.innerHTML = `<div class="eligibility-badge ineligible">✗ &nbsp;余额充足，暂不可借款</div>`;
+        btn.disabled = true;
+      }
+    }
+
+    async function borrow() {
+      const btn = document.getElementById('borrowBtn');
+      const msg = document.getElementById('borrowMsg');
+      btn.disabled = true;
+      btn.textContent = '处理中...';
+      msg.textContent = '';
+
+      const res = await fetch('/api/loan/borrow', { method: 'POST' });
+      const data = await res.json();
+
+      btn.textContent = '借款 ¥5,000';
+      if (data.success) {
+        state = { balance: data.balance, loan_amount: data.loan_amount };
+        updateHero();
+        updateBorrowBadge();
+        msg.style.color = 'var(--green)';
+        msg.textContent = '借款成功！¥5,000 已到账';
+      } else {
+        msg.style.color = 'var(--red)';
+        msg.textContent = data.error;
+        updateBorrowBadge();
+      }
+    }
+
+    async function repay() {
+      const btn = document.getElementById('repayBtn');
+      const msg = document.getElementById('repayMsg');
+      const amt = document.getElementById('repayAmount').value;
+
+      msg.textContent = '';
+      if (!amt || parseInt(amt) <= 0) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = '请输入有效金额';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '处理中...';
+
+      const res = await fetch('/api/loan/repay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: parseInt(amt) })
+      });
+      const data = await res.json();
+
+      btn.disabled = false;
+      btn.textContent = '确认还款';
+
+      if (data.success) {
+        state = { balance: data.balance, loan_amount: data.loan_amount };
+        updateHero();
+        updateBorrowBadge();
+        document.getElementById('repayAmount').value = '';
+        msg.style.color = 'var(--green)';
+        msg.textContent = `还款成功！${data.loan_amount === 0 ? '债务已全部清零 🎉' : `剩余欠款 ¥${data.loan_amount.toLocaleString()}`}`;
+      } else {
+        msg.style.color = 'var(--red)';
+        msg.textContent = data.error;
+      }
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach((t, i) => {
+        t.classList.toggle('active', ['borrow', 'repay', 'rules'][i] === name);
+      });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    document.getElementById('repayAmount').addEventListener('keydown', e => {
+      if (e.key === 'Enter') repay();
+    });
+
+    init();
+  </script>
+</body>
+</html>
