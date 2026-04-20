@@ -175,7 +175,7 @@
     <div id="tab-borrow" class="tab-content active">
       <div class="loan-card">
         <div class="loan-card-title">💸 申请借款</div>
-        <div class="loan-card-desc">余额低于 ¥100 时，可向银行借款 ¥5,000。借款后欠款记录增加，还清前每场投注不可超过余额的 50%。</div>
+        <div class="loan-card-desc">手中余额 + 进行中押注之和低于 ¥100 时，可向银行借款 ¥5,000。借款后欠款记录增加，还清前每场投注不可超过手中余额的 50%。</div>
         <div id="borrowBadge"></div>
         <button class="btn btn-primary" id="borrowBtn" onclick="borrow()">借款 ¥5,000</button>
         <div class="loan-msg" id="borrowMsg"></div>
@@ -203,7 +203,7 @@
           <div class="rule-icon">📉</div>
           <div>
             <div class="rule-body-title">借款条件</div>
-            <div class="rule-body-text">余额低于 <span class="highlight">¥100</span> 时，可向银行申请借款 <span class="highlight">¥5,000</span>。可多次借款，每次借 ¥5,000。</div>
+            <div class="rule-body-text"><span class="highlight">手中余额 + 进行中押注金额</span>之和低于 <span class="highlight">¥100</span> 时，可向银行申请借款 <span class="highlight">¥5,000</span>。可多次借款，每次借 ¥5,000，欠款累加。</div>
           </div>
         </div>
         <div class="rule-item">
