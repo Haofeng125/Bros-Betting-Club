@@ -86,7 +86,7 @@ module.exports = (JWT_SECRET) => {
       SELECT u.id, u.username, u.balance, u.loan_amount, u.weekly_profit,
              u.balance + COALESCE(SUM(
                CASE WHEN b.status = 'active' AND g.status NOT IN ('settled','voided') THEN b.amount ELSE 0 END
-             ), 0) AS total_wealth
+             ), 0) - u.loan_amount AS total_wealth
       FROM users u
       LEFT JOIN bets b ON b.user_id = u.id
       LEFT JOIN games g ON b.game_id = g.id
