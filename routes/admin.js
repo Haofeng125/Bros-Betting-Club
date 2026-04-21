@@ -43,7 +43,7 @@ module.exports = (JWT_SECRET, io) => {
   });
 
   router.put('/users/:id', requireAdmin, (req, res) => {
-    const { balance, password } = req.body;
+    const { balance, password, loan_amount } = req.body;
     const id = parseInt(req.params.id);
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
@@ -55,6 +55,8 @@ module.exports = (JWT_SECRET, io) => {
     }
     if (balance !== undefined && !isNaN(balance))
       db.prepare('UPDATE users SET balance = ? WHERE id = ?').run(parseInt(balance), id);
+    if (loan_amount !== undefined && !isNaN(loan_amount))
+      db.prepare('UPDATE users SET loan_amount = ? WHERE id = ?').run(Math.max(0, parseInt(loan_amount)), id);
 
     res.json({ success: true });
   });

@@ -243,6 +243,10 @@
         <input type="number" id="editBalance">
       </div>
       <div class="form-group">
+        <label>欠款金额</label>
+        <input type="number" id="editLoan" min="0">
+      </div>
+      <div class="form-group">
         <label>新密码（留空不修改）</label>
         <input type="password" id="editPassword" placeholder="留空则不修改">
       </div>
@@ -474,7 +478,7 @@
           <td>${u.loan_amount > 0 ? `<span class="loan-tag">欠 ¥${u.loan_amount.toLocaleString()}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
           <td>
             <div class="action-btns">
-              <button class="btn btn-ghost btn-sm" onclick="openEditPlayer(${u.id},'${u.username}',${u.balance})">编辑</button>
+              <button class="btn btn-ghost btn-sm" onclick="openEditPlayer(${u.id},'${u.username}',${u.balance},${u.loan_amount})">编辑</button>
               ${!u.is_admin ? `<button class="btn btn-danger btn-sm" onclick="deletePlayer(${u.id},'${u.username}')">删除</button>` : ''}
             </div>
           </td>
@@ -505,10 +509,11 @@
       else errorEl.textContent = data.error;
     }
 
-    function openEditPlayer(id, username, balance) {
+    function openEditPlayer(id, username, balance, loan) {
       editingUserId = id;
       document.getElementById('editUsername').textContent = username;
       document.getElementById('editBalance').value = balance;
+      document.getElementById('editLoan').value = loan;
       document.getElementById('editPassword').value = '';
       document.getElementById('editPlayerError').textContent = '';
       document.getElementById('editPlayerModal').classList.add('open');
@@ -516,9 +521,10 @@
 
     async function savePlayer() {
       const balance = document.getElementById('editBalance').value;
+      const loan_amount = document.getElementById('editLoan').value;
       const password = document.getElementById('editPassword').value;
       const errorEl = document.getElementById('editPlayerError');
-      const body = { balance };
+      const body = { balance, loan_amount };
       if (password) {
         if (password.length < 6) { errorEl.textContent = '密码至少6位'; return; }
         body.password = password;
