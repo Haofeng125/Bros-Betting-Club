@@ -183,5 +183,5 @@ setInterval(closeExpiredGames, 15000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`兄弟押注局 运行中 → http://localhost:${PORT}`);
+  console.log(`破产模拟器 运行中 → http://localhost:${PORT}`);
 });
