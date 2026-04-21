@@ -163,5 +163,74 @@ module.exports = (JWT_SECRET, io) => {
     }
   });
 
+  // ── 修改结算结果 ──
+
+  router.post('/games/:id/resettle', requireAdmin, (req, res) => {
+    const gameId = parseInt(req.params.id);
+    const { winner } = req.body;
+
+    if (!['A', 'B'].includes(winner))
+      return res.json({ success: false, error: '请选择胜利队伍' });
+
+    const game = db.prepare('SELECT * FROM games WHERE id = ?').get(gameId);
+    if (!game) return res.json({ success: false, error: '比赛不存在' });
+    if (game.status !== 'settled') return res.json({ success: false, error: '只能修改已结算的比赛' });
+    if (game.winner === winner) return res.json({ success: false, error: '与当前结果相同，无需修改' });
+
+    const resettle = db.transaction(() => {
+      const bets = db.prepare(`
+        SELECT b.id, b.user_id, b.team, b.amount, u.username
+        FROM bets b JOIN users u ON b.user_id = u.id
+        WHERE b.game_id = ? AND b.status = 'active'
+      `).all(gameId);
+
+      const oldWinner = game.winner;
+      const oldOdds = oldWinner === 'A' ? game.odds_a : game.odds_b;
+      const newOdds = winner === 'A' ? game.odds_a : game.odds_b;
+      const newWinnerName = winner === 'A' ? game.team_a : game.team_b;
+      const results = [];
+
+      for (const bet of bets) {
+        const wasWinner = bet.team === oldWinner;
+        const isWinner  = bet.team === winner;
+
+        if (wasWinner && !isWinner) {
+          // Was winner, now loser: reverse old payout, record new loss
+          const oldPayout = Math.floor(bet.amount * oldOdds);
+          db.prepare(`
+            UPDATE users SET
+              balance = balance - ?,
+              weekly_profit = weekly_profit - ? - ?
+            WHERE id = ?
+          `).run(oldPayout, oldPayout - bet.amount, bet.amount, bet.user_id);
+          results.push({ username: bet.username, type: '落败', profit: -bet.amount });
+
+        } else if (!wasWinner && isWinner) {
+          // Was loser, now winner: reverse old loss, give new payout
+          const newPayout = Math.floor(bet.amount * newOdds);
+          db.prepare(`
+            UPDATE users SET
+              balance = balance + ?,
+              weekly_profit = weekly_profit + ? + ?
+            WHERE id = ?
+          `).run(newPayout, bet.amount, newPayout - bet.amount, bet.user_id);
+          results.push({ username: bet.username, type: '获胜', amount: newPayout, profit: newPayout - bet.amount });
+        }
+      }
+
+      db.prepare(`UPDATE games SET winner = ? WHERE id = ?`).run(winner, gameId);
+      io.to(`game:${gameId}`).emit('gameStatusChanged', { status: 'settled', winner, winnerName: newWinnerName });
+
+      return { winner, winnerName: newWinnerName, results, oddsA: game.odds_a, oddsB: game.odds_b };
+    });
+
+    try {
+      const outcome = resettle();
+      res.json({ success: true, ...outcome });
+    } catch (err) {
+      res.json({ success: false, error: '修改失败：' + err.message });
+    }
+  });
+
   return router;
 };

@@ -197,6 +197,23 @@
     </div>
   </div>
 
+  <!-- 修改结果 Modal -->
+  <div class="modal-overlay" id="resettleModal">
+    <div class="modal">
+      <div class="modal-title">修改比赛结果</div>
+      <p id="resettleGameName" style="color:var(--text-muted);margin-bottom:4px;font-size:14px"></p>
+      <p id="resettleCurrentResult" style="color:var(--gold);margin-bottom:6px;font-size:13px;font-weight:600"></p>
+      <p style="font-size:12px;color:var(--red);margin-bottom:20px">⚠️ 所有相关玩家的余额和本周盈亏将自动重新计算</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">修改为获胜队伍</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <button class="btn btn-primary btn-sm" id="resettleBtnA" style="padding:12px;font-size:14px;margin-top:0;background:var(--blue)" onclick="resettleGame('A')"></button>
+        <button class="btn btn-primary btn-sm" id="resettleBtnB" style="padding:12px;font-size:14px;margin-top:0;background:var(--red)" onclick="resettleGame('B')"></button>
+      </div>
+      <div class="error-msg" id="resettleError"></div>
+      <button class="btn btn-ghost" style="width:100%;border-radius:var(--radius-sm);margin-top:8px" onclick="closeModal('resettleModal')">取消</button>
+    </div>
+  </div>
+
   <!-- 添加玩家 Modal -->
   <div class="modal-overlay" id="addPlayerModal">
     <div class="modal">
@@ -293,6 +310,9 @@
             <div class="action-btns">
               ${['open','pending','closed'].includes(g.status)
                 ? `<button class="btn btn-primary btn-sm" onclick="openSettle(${g.id},'${g.team_a}','${g.team_b}',${g.odds_a},${g.odds_b})">公布结果</button>`
+                : ''}
+              ${g.status === 'settled'
+                ? `<button class="btn btn-ghost btn-sm" onclick="openResettle(${g.id},'${g.team_a}','${g.team_b}',${g.odds_a},${g.odds_b},'${g.winner}')">修改结果</button>`
                 : ''}
               ${!['settled','voided'].includes(g.status)
                 ? `<button class="btn btn-danger btn-sm" onclick="deleteGame(${g.id})">删除</button>`
@@ -392,6 +412,49 @@
           `).join('')}`;
       }
       document.getElementById('resultModal').classList.add('open');
+    }
+
+    // ── 修改结果 ──
+
+    let resettlingGameId = null;
+
+    function openResettle(id, teamA, teamB, oddsA, oddsB, currentWinner) {
+      resettlingGameId = id;
+      const currentWinnerName = currentWinner === 'A' ? teamA : teamB;
+      document.getElementById('resettleGameName').textContent = `${teamA} vs ${teamB}`;
+      document.getElementById('resettleCurrentResult').textContent = `当前结果：${currentWinnerName} 胜`;
+      document.getElementById('resettleBtnA').textContent = `🏆 ${teamA}`;
+      document.getElementById('resettleBtnB').textContent = `🏆 ${teamB}`;
+      document.getElementById('resettleError').textContent = '';
+      document.getElementById('resettleModal').classList.add('open');
+    }
+
+    async function resettleGame(winner) {
+      const errorEl = document.getElementById('resettleError');
+      const res = await fetch(`/api/admin/games/${resettlingGameId}/resettle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ winner })
+      });
+      const data = await res.json();
+      if (!data.success) { errorEl.textContent = data.error; return; }
+
+      closeModal('resettleModal');
+      const typeColor = { '获胜': 'var(--green)', '落败': 'var(--red)' };
+      document.getElementById('resultTitle').textContent = `✏️ 结果已修改 → ${data.winnerName} 胜`;
+      document.getElementById('resultBody').innerHTML = `
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">以下玩家余额已重新计算</p>
+        ${data.results.map(r => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);font-size:14px">
+            <span style="font-weight:600">${r.username} <span style="color:var(--text-muted);font-weight:400;font-size:12px">${r.type}</span></span>
+            <span style="font-weight:700;color:${typeColor[r.type] || 'var(--text)'}">
+              ${r.type === '获胜' ? `+¥${r.amount.toLocaleString()}` : `-¥${Math.abs(r.profit).toLocaleString()}`}
+            </span>
+          </div>
+        `).join('')}`;
+      document.getElementById('resultModal').classList.add('open');
+      loadGames();
+      loadPlayers();
     }
 
     // ── 玩家 ──
