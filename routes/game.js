@@ -4,7 +4,7 @@ const db = require('../database');
 
 function fetchBets(gameId) {
   return db.prepare(`
-    SELECT b.user_id, b.team, b.amount, b.status, u.username
+    SELECT b.user_id, b.team, b.amount, b.status, b.payout, b.recovery, u.username
     FROM bets b JOIN users u ON b.user_id = u.id
     WHERE b.game_id = ? AND b.status = 'active'
   `).all(gameId);

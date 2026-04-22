@@ -109,7 +109,14 @@ module.exports = (JWT_SECRET, loginLimiter) => {
     try {
       const user = jwt.verify(token, JWT_SECRET);
       const row = db.prepare('SELECT id, username, balance, loan_amount, is_admin FROM users WHERE id = ?').get(user.id);
-      res.json({ loggedIn: true, ...row });
+      const pendingRow = db.prepare(`
+        SELECT COALESCE(SUM(b.amount), 0) AS total
+        FROM bets b JOIN games g ON b.game_id = g.id
+        WHERE b.user_id = ? AND b.status = 'active' AND g.status NOT IN ('settled', 'voided')
+      `).get(user.id);
+      const pending_bets = pendingRow.total;
+      const total_assets = row.balance + pending_bets - row.loan_amount;
+      res.json({ loggedIn: true, ...row, pending_bets, total_assets });
     } catch {
       res.json({ loggedIn: false });
     }

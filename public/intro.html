@@ -126,6 +126,7 @@
       <button class="tab-btn active" onclick="switchTab('basic')">基础规则</button>
       <button class="tab-btn" onclick="switchTab('odds')">赔率说明</button>
       <button class="tab-btn" onclick="switchTab('loan')">贷款系统</button>
+      <button class="tab-btn" onclick="switchTab('bonus')">奖惩机制</button>
       <button class="tab-btn" onclick="switchTab('special')">特殊情况</button>
     </div>
 
@@ -303,6 +304,98 @@
       </div>
     </div>
 
+    <!-- 奖惩机制 -->
+    <div id="tab-bonus" class="tab-content">
+
+      <div class="rule-card">
+        <div class="rule-title">🔥 破产加成（Brokie Bonus）</div>
+        <div class="rule-body">
+          系统会根据你的<span class="highlight">总资产</span>（手中余额 + 进行中押注 − 欠款）给予不同程度的保护与加成：
+          <table class="odds-table" style="margin-top:14px">
+            <thead>
+              <tr><th>总资产</th><th>获胜加成</th><th>落败返还</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="hl-red">< ¥0（负资产）</span></td>
+                <td style="color:var(--green)">全额赔付 × 1.15</td>
+                <td style="color:var(--gold)">投注额 × 30%</td>
+              </tr>
+              <tr>
+                <td><span class="highlight">¥0 – ¥5,000</span></td>
+                <td style="color:var(--green)">净利润 × 1.15</td>
+                <td style="color:var(--gold)">投注额 × 10%</td>
+              </tr>
+              <tr>
+                <td>＞ ¥5,000</td>
+                <td>无加成</td>
+                <td>无返还</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="example-box" style="margin-top:14px">
+            <strong>示例（负资产玩家，赔率 1.5x，投 ¥1,000）：</strong><br>
+            基础赔付 = ¥1,500 → 破产加成 × 1.15 = <span style="color:var(--green)">¥1,725</span>（净赚 ¥725）<br>
+            若落败 → 返还 ¥1,000 × 30% = <span style="color:var(--gold)">¥300</span>（净亏 ¥700）
+          </div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">⚖️ 债务税（Debt Tax）</div>
+        <div class="rule-body">
+          如果你有未还欠款，且<span class="hl-red">手中余额</span>相对欠款较多，系统会对你的<span class="highlight">获胜利润</span>征税（本金始终全额返回）：
+          <table class="odds-table" style="margin-top:14px">
+            <thead>
+              <tr><th>手中余额 vs 欠款</th><th>保留利润比例</th><th>税率</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>余额 ≥ 1× 欠款</td>
+                <td style="color:var(--green)">90%</td>
+                <td style="color:var(--red)">10%</td>
+              </tr>
+              <tr>
+                <td>余额 ≥ 2× 欠款</td>
+                <td style="color:var(--gold)">70%</td>
+                <td style="color:var(--red)">30%</td>
+              </tr>
+              <tr>
+                <td>余额 ≥ 3× 欠款</td>
+                <td style="color:var(--red)">50%</td>
+                <td style="color:var(--red)">50%</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="example-box" style="margin-top:14px">
+            <strong>示例（欠款 ¥5,000，手中余额 ¥11,000，赔率 1.5x，投 ¥1,000）：</strong><br>
+            余额 ¥11,000 − 投注 ¥1,000 = ¥10,000 ≥ 2× 欠款（¥10,000）→ 保留 70%<br>
+            基础利润 = ¥500 → 实得利润 = ¥500 × 70% = ¥350<br>
+            <span style="color:var(--green)">最终到手 = ¥1,000（本金）+ ¥350 = ¥1,350</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-title">📐 两者叠加</div>
+        <div class="rule-body">
+          破产加成和债务税可以同时生效。计算顺序：
+          <ul>
+            <li>先用<span class="highlight">总资产</span>判断是否触发破产加成，并计算加成后利润</li>
+            <li>再用<span class="highlight">手中余额</span>对比欠款，决定债务税比例，作用于利润</li>
+            <li>落败返还<span class="hl-green">不受债务税影响</span></li>
+          </ul>
+          <div class="example-box">
+            <strong>示例（总资产 ¥2,000，欠款 ¥5,000，余额 ¥6,000，赔率 1.5x，投 ¥1,000）：</strong><br>
+            总资产 ¥2,000 → 触发破产加成（¥0–¥5,000 档）：利润 ¥500 × 1.15 = ¥575<br>
+            余额 ¥6,000 − 投注 ¥1,000 = ¥5,000 ≥ 1× 欠款 → 债务税 10%：¥575 × 0.90 = ¥517<br>
+            <span style="color:var(--green)">最终到手 = ¥1,000 + ¥517 = ¥1,517</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- 特殊情况 -->
     <div id="tab-special" class="tab-content">
       <div class="rule-card">
@@ -348,7 +441,7 @@
   <script>
     function switchTab(name) {
       document.querySelectorAll('.tab-btn').forEach((t, i) => {
-        t.classList.toggle('active', ['basic', 'odds', 'loan', 'special'][i] === name);
+        t.classList.toggle('active', ['basic', 'odds', 'loan', 'bonus', 'special'][i] === name);
       });
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.getElementById('tab-' + name).classList.add('active');

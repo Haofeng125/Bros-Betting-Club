@@ -263,17 +263,47 @@
     .chip:hover { border-color: var(--gold-border); color: var(--gold); }
 
     .payout-preview {
-      background: var(--green-dim);
-      border: 1px solid rgba(48, 216, 123, 0.2);
+      border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 12px 16px;
       margin-bottom: 18px;
       display: none;
+      overflow: hidden;
     }
-    .payout-preview.visible { display: flex; justify-content: space-between; align-items: center; }
-    .payout-label { font-size: 12px; color: var(--text-muted); }
-    .payout-amount { font-size: 20px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
-    .payout-profit { font-size: 12px; color: var(--green); margin-top: 1px; }
+    .payout-preview.visible { display: grid; grid-template-columns: 1fr 1px 1fr; }
+    .preview-divider { background: var(--border); }
+    .preview-side { padding: 13px 15px; }
+    .preview-win { background: var(--green-dim); }
+    .preview-lose { background: var(--surface2); }
+    .preview-side-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .preview-side-amount { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; margin-bottom: 2px; }
+    .preview-win .preview-side-amount { color: var(--green); }
+    .preview-lose .preview-side-amount { color: var(--text-muted); }
+    .preview-lose-recovery .preview-side-amount { color: var(--gold) !important; }
+    .preview-side-sub { font-size: 11px; margin-bottom: 4px; }
+    .preview-win .preview-side-sub { color: var(--green); }
+    .preview-lose .preview-side-sub { color: var(--text-muted); }
+    .preview-side-breakdown { font-size: 10px; color: var(--text-muted); line-height: 1.6; }
+
+    .my-bet-outcomes {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .my-bet-outcome {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+    }
+    .outcome-win { background: var(--green-dim); border-color: rgba(48,216,123,0.2); }
+    .outcome-recover { border-color: var(--gold-border); }
+    .my-bet-outcome-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+    .my-bet-outcome-amount { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; margin-bottom: 3px; }
+    .outcome-win .my-bet-outcome-amount { color: var(--green); }
+    .outcome-recover .my-bet-outcome-amount { color: var(--gold); }
+    .outcome-loss .my-bet-outcome-amount { color: var(--text-muted); }
+    .my-bet-outcome-breakdown { font-size: 10px; color: var(--text-muted); line-height: 1.5; }
 
     /* ── My Bet Card ── */
     .my-bet-card {
@@ -444,11 +474,8 @@
           <span class="my-bet-team-tag" id="myBetTag"></span>
           <span class="my-bet-amount" id="myBetAmount"></span>
         </div>
-        <div class="my-bet-right">
-          <div class="my-bet-return-label">若获胜可得</div>
-          <div class="my-bet-return-val" id="myBetReturn">--</div>
-        </div>
       </div>
+      <div class="my-bet-outcomes" id="myBetOutcomes"></div>
     </div>
 
     <!-- Bet Form -->
@@ -481,11 +508,19 @@
         </div>
 
         <div class="payout-preview" id="payoutPreview">
-          <div>
-            <div class="payout-label">若获胜可得</div>
-            <div class="payout-profit" id="payoutProfit"></div>
+          <div class="preview-side preview-win">
+            <div class="preview-side-label">🏆 若获胜</div>
+            <div class="preview-side-amount" id="previewWinAmount">--</div>
+            <div class="preview-side-sub" id="previewWinProfit"></div>
+            <div class="preview-side-breakdown" id="previewWinBreakdown"></div>
           </div>
-          <div class="payout-amount" id="payoutAmount">--</div>
+          <div class="preview-divider"></div>
+          <div class="preview-side preview-lose" id="previewLoseSide">
+            <div class="preview-side-label">💸 若落败</div>
+            <div class="preview-side-amount" id="previewLoseAmount">--</div>
+            <div class="preview-side-sub" id="previewLoseSub"></div>
+            <div class="preview-side-breakdown" id="previewLoseBreakdown"></div>
+          </div>
         </div>
 
         <button class="btn btn-primary" id="betBtn" onclick="placeBet()">确认投注</button>
@@ -508,11 +543,11 @@
 
   <!-- Confirm Modal -->
   <div class="modal-overlay" id="confirmModal">
-    <div class="modal" style="max-width:360px;text-align:center">
+    <div class="modal" style="max-width:400px;text-align:center">
       <div style="font-size:32px;margin-bottom:14px">⚠️</div>
       <div class="modal-title" style="text-align:center">确认投注？</div>
-      <p id="confirmText" style="font-size:15px;color:var(--text);margin-bottom:8px;font-weight:600"></p>
-      <p id="confirmReturn" style="font-size:13px;color:var(--green);margin-bottom:20px"></p>
+      <p id="confirmText" style="font-size:15px;color:var(--text);margin-bottom:16px;font-weight:600"></p>
+      <div id="confirmOutcomes" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;text-align:left"></div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:24px">一旦下注，概不后悔。</p>
       <div style="display:flex;gap:10px">
         <button class="btn btn-primary" style="margin-top:0" onclick="confirmBet()">确认</button>
@@ -621,6 +656,46 @@
       }).join('');
     }
 
+    // ── Preview calculation (mirrors backend calcBetOutcome) ──
+    function calcPreview(amt, odds) {
+      const totalAssets = (myUser.balance || 0) + (myUser.pending_bets || 0) - (myUser.loan_amount || 0);
+      const postBetBalance = (myUser.balance || 0) - amt;
+      const loanAmt = myUser.loan_amount || 0;
+
+      const basePayout = Math.floor(amt * odds);
+      const baseProfit = basePayout - amt;
+      let adjustedProfit = baseProfit;
+      let brokieTier = 0;
+
+      if (totalAssets < 0)          { brokieTier = 1; adjustedProfit = Math.floor(basePayout * 1.15) - amt; }
+      else if (totalAssets <= 5000) { brokieTier = 2; adjustedProfit = Math.floor(baseProfit * 1.15); }
+
+      let keepRate = 1.0;
+      if (loanAmt > 0) {
+        if (postBetBalance >= 3 * loanAmt)      keepRate = 0.50;
+        else if (postBetBalance >= 2 * loanAmt) keepRate = 0.70;
+        else if (postBetBalance >= loanAmt)     keepRate = 0.90;
+      }
+      if (keepRate < 1.0) adjustedProfit = Math.floor(adjustedProfit * keepRate);
+
+      let recovery = 0;
+      if (totalAssets < 0)          recovery = Math.floor(amt * 0.30);
+      else if (totalAssets <= 5000) recovery = Math.floor(amt * 0.10);
+
+      return { basePayout, finalPayout: amt + adjustedProfit, profit: adjustedProfit, recovery, brokieTier, keepRate };
+    }
+
+    function previewBreakdown(amt, odds, p) {
+      const winParts = [`¥${amt.toLocaleString()} × ${odds.toFixed(2)}`];
+      if (p.brokieTier === 1) winParts.push('破产加成 ×1.15（全额）');
+      if (p.brokieTier === 2) winParts.push('破产加成 ×1.15（利润）');
+      if (p.keepRate < 1.0)   winParts.push(`债务税 ×${p.keepRate.toFixed(2)}`);
+      const loseText = p.brokieTier === 1 ? '破产保险 30% 返还'
+                     : p.brokieTier === 2 ? '破产保险 10% 返还'
+                     : '无保险返还';
+      return { win: winParts.join(' → '), lose: loseText };
+    }
+
     function showMyBet(myBet, game) {
       document.getElementById('betForm').style.display = 'none';
       const card = document.getElementById('myBetCard');
@@ -632,7 +707,56 @@
       tag.textContent = teamName;
       tag.className = 'my-bet-team-tag ' + (isA ? 'tag-a' : 'tag-b');
       document.getElementById('myBetAmount').textContent = '¥' + myBet.amount.toLocaleString();
-      document.getElementById('myBetReturn').textContent = '¥' + Math.floor(myBet.amount * odds).toLocaleString();
+
+      const outcomesEl = document.getElementById('myBetOutcomes');
+
+      if (game.status === 'settled') {
+        const won = myBet.team === game.winner;
+        if (won) {
+          const payout = (myBet.payout > 0) ? myBet.payout : Math.floor(myBet.amount * odds);
+          outcomesEl.innerHTML = `
+            <div class="my-bet-outcome outcome-win" style="grid-column:1/-1">
+              <div class="my-bet-outcome-label">🏆 获胜</div>
+              <div class="my-bet-outcome-amount">¥${payout.toLocaleString()}</div>
+              <div class="my-bet-outcome-breakdown">净赚 +¥${(payout - myBet.amount).toLocaleString()}</div>
+            </div>`;
+        } else {
+          const recovery = myBet.recovery || 0;
+          if (recovery > 0) {
+            outcomesEl.innerHTML = `
+              <div class="my-bet-outcome outcome-recover" style="grid-column:1/-1">
+                <div class="my-bet-outcome-label">💸 落败（破产保险）</div>
+                <div class="my-bet-outcome-amount">返还 ¥${recovery.toLocaleString()}</div>
+                <div class="my-bet-outcome-breakdown">净亏 -¥${(myBet.amount - recovery).toLocaleString()}</div>
+              </div>`;
+          } else {
+            outcomesEl.innerHTML = `
+              <div class="my-bet-outcome outcome-loss" style="grid-column:1/-1">
+                <div class="my-bet-outcome-label">💸 落败</div>
+                <div class="my-bet-outcome-amount">-¥${myBet.amount.toLocaleString()}</div>
+                <div class="my-bet-outcome-breakdown">全额亏损</div>
+              </div>`;
+          }
+        }
+      } else {
+        const p = calcPreview(myBet.amount, odds);
+        const bd = previewBreakdown(myBet.amount, odds, p);
+        const loseClass = p.recovery > 0 ? 'outcome-recover' : 'outcome-loss';
+        const loseAmtHTML = p.recovery > 0
+          ? `返还 ¥${p.recovery.toLocaleString()}`
+          : '全额亏损';
+        outcomesEl.innerHTML = `
+          <div class="my-bet-outcome outcome-win">
+            <div class="my-bet-outcome-label">🏆 若获胜</div>
+            <div class="my-bet-outcome-amount">¥${p.finalPayout.toLocaleString()}</div>
+            <div class="my-bet-outcome-breakdown">${bd.win}</div>
+          </div>
+          <div class="my-bet-outcome ${loseClass}">
+            <div class="my-bet-outcome-label">💸 若落败</div>
+            <div class="my-bet-outcome-amount">${loseAmtHTML}</div>
+            <div class="my-bet-outcome-breakdown">${bd.lose}</div>
+          </div>`;
+      }
     }
 
     function showClosed() {
@@ -685,10 +809,24 @@
         return;
       }
       const odds = selectedTeam === 'A' ? gameData.odds_a : gameData.odds_b;
-      const payout = Math.floor(amt * odds);
-      const profit = payout - amt;
-      document.getElementById('payoutAmount').textContent = '¥' + payout.toLocaleString();
-      document.getElementById('payoutProfit').textContent = '净赚 +¥' + profit.toLocaleString();
+      const p = calcPreview(amt, odds);
+      const bd = previewBreakdown(amt, odds, p);
+
+      document.getElementById('previewWinAmount').textContent = '¥' + p.finalPayout.toLocaleString();
+      document.getElementById('previewWinProfit').textContent = '净赚 +¥' + p.profit.toLocaleString();
+      document.getElementById('previewWinBreakdown').textContent = bd.win;
+
+      const loseSide = document.getElementById('previewLoseSide');
+      if (p.recovery > 0) {
+        document.getElementById('previewLoseAmount').textContent = '返还 ¥' + p.recovery.toLocaleString();
+        document.getElementById('previewLoseSub').textContent = '净亏 -¥' + (amt - p.recovery).toLocaleString();
+        loseSide.classList.add('preview-lose-recovery');
+      } else {
+        document.getElementById('previewLoseAmount').textContent = '全额亏损';
+        document.getElementById('previewLoseSub').textContent = '-¥' + amt.toLocaleString();
+        loseSide.classList.remove('preview-lose-recovery');
+      }
+      document.getElementById('previewLoseBreakdown').textContent = bd.lose;
       preview.classList.add('visible');
     }
 
@@ -701,10 +839,27 @@
 
       const teamName = selectedTeam === 'A' ? gameData.team_a : gameData.team_b;
       const odds = selectedTeam === 'A' ? gameData.odds_a : gameData.odds_b;
-      const payout = Math.floor(amount * odds);
+      const p = calcPreview(amount, odds);
+      const bd = previewBreakdown(amount, odds, p);
 
-      document.getElementById('confirmText').textContent = `${teamName}  ¥${amount.toLocaleString()}`;
-      document.getElementById('confirmReturn').textContent = `若获胜可得 ¥${payout.toLocaleString()}（赔率 ${odds.toFixed(2)}x）`;
+      document.getElementById('confirmText').textContent = `押 ${teamName}  ¥${amount.toLocaleString()}  (${odds.toFixed(2)}x)`;
+
+      const loseHTML = p.recovery > 0
+        ? `<div style="font-size:17px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;margin-bottom:2px">返还 ¥${p.recovery.toLocaleString()}</div><div style="font-size:10px;color:var(--text-muted)">${bd.lose}</div>`
+        : `<div style="font-size:17px;font-weight:800;color:var(--text-muted);font-variant-numeric:tabular-nums;margin-bottom:2px">全额亏损</div><div style="font-size:10px;color:var(--text-muted)">${bd.lose}</div>`;
+
+      document.getElementById('confirmOutcomes').innerHTML = `
+        <div style="background:var(--green-dim);border:1px solid rgba(48,216,123,0.2);border-radius:var(--radius-sm);padding:12px 13px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">🏆 若获胜</div>
+          <div style="font-size:20px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;margin-bottom:2px">¥${p.finalPayout.toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--green);margin-bottom:3px">净赚 +¥${p.profit.toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text-muted)">${bd.win}</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 13px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">💸 若落败</div>
+          ${loseHTML}
+        </div>`;
+
       document.getElementById('confirmModal').classList.add('open');
     }
 
