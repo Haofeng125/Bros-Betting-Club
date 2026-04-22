@@ -93,14 +93,31 @@ module.exports = (JWT_SECRET, loginLimiter) => {
       GROUP BY u.id
     `).all();
 
+    const winRateUsers = db.prepare(`
+      SELECT u.id, u.username,
+        COUNT(CASE WHEN b.status = 'active' AND g.status = 'settled' THEN 1 END) AS total_bets,
+        COUNT(CASE WHEN b.status = 'active' AND g.status = 'settled' AND b.team = g.winner THEN 1 END) AS wins
+      FROM users u
+      LEFT JOIN bets b ON b.user_id = u.id
+      LEFT JOIN games g ON b.game_id = g.id
+      GROUP BY u.id
+    `).all();
+
     const collator = new Intl.Collator('zh-CN', { sensitivity: 'base' });
     const tieBreak = (a, b) => collator.compare(a.username[0] || '', b.username[0] || '');
 
-    const byBalance = [...users].sort((a, b) => b.balance !== a.balance ? b.balance - a.balance : tieBreak(a, b));
-    const byWealth  = [...users].sort((a, b) => b.total_wealth !== a.total_wealth ? b.total_wealth - a.total_wealth : tieBreak(a, b));
-    const byWeekly  = [...users].sort((a, b) => b.weekly_profit !== a.weekly_profit ? b.weekly_profit - a.weekly_profit : tieBreak(a, b));
+    const byBalance  = [...users].sort((a, b) => b.balance !== a.balance ? b.balance - a.balance : tieBreak(a, b));
+    const byWealth   = [...users].sort((a, b) => b.total_wealth !== a.total_wealth ? b.total_wealth - a.total_wealth : tieBreak(a, b));
+    const byWeekly   = [...users].sort((a, b) => b.weekly_profit !== a.weekly_profit ? b.weekly_profit - a.weekly_profit : tieBreak(a, b));
+    const byWinRate  = [...winRateUsers].sort((a, b) => {
+      const rA = a.total_bets > 0 ? a.wins / a.total_bets : -1;
+      const rB = b.total_bets > 0 ? b.wins / b.total_bets : -1;
+      if (rA !== rB) return rB - rA;
+      if (a.total_bets !== b.total_bets) return b.total_bets - a.total_bets;
+      return tieBreak(a, b);
+    });
 
-    res.json({ byBalance, byWealth, byWeekly });
+    res.json({ byBalance, byWealth, byWeekly, byWinRate });
   });
 
   router.get('/me', (req, res) => {
