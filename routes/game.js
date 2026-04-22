@@ -54,7 +54,7 @@ module.exports = (JWT_SECRET, io) => {
     if (!game) return res.status(404).json({ error: '比赛不存在' });
 
     const allBets = db.prepare(`
-      SELECT b.user_id, b.team, b.amount, b.status, u.username
+      SELECT b.user_id, b.team, b.amount, b.status, b.payout, b.recovery, u.username
       FROM bets b JOIN users u ON b.user_id = u.id
       WHERE b.game_id = ?
     `).all(gameId);
@@ -69,9 +69,11 @@ module.exports = (JWT_SECRET, io) => {
     const results = activeBets.map(b => {
       const won = game.status === 'settled' && b.team === game.winner;
       const odds = b.team === 'A' ? game.odds_a : game.odds_b;
-      const payout = won ? Math.floor(b.amount * odds) : 0;
-      const profit = won ? payout - b.amount : -b.amount;
-      return { ...b, won, payout, profit };
+      // Use stored payout/recovery if available, fall back to base odds for legacy bets
+      const payout = won ? (b.payout > 0 ? b.payout : Math.floor(b.amount * odds)) : 0;
+      const recovery = won ? 0 : (b.recovery || 0);
+      const profit = won ? payout - b.amount : -(b.amount - recovery);
+      return { ...b, won, payout, recovery, profit };
     });
 
     res.json({ game, results, refundedBets, sumA, sumB, pool, oddsA: game.odds_a, oddsB: game.odds_b });

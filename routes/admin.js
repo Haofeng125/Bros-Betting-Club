@@ -106,6 +106,75 @@ module.exports = (JWT_SECRET, io) => {
     res.json({ success: true });
   });
 
+  // ── Settlement calculation helper ──
+
+  // Calculates actual payout (win) or recovery (loss) for a bet,
+  // applying brokie rewards and debt tax.
+  // user.balance must be the balance AFTER the bet was deducted (as stored in DB at settlement time).
+  function calcBetOutcome(user, betAmount, won, winningOdds) {
+    // Total assets = current balance + all pending bets - loan_amount
+    const pendingRow = db.prepare(`
+      SELECT COALESCE(SUM(b.amount), 0) AS total
+      FROM bets b JOIN games g ON b.game_id = g.id
+      WHERE b.user_id = ? AND b.status = 'active' AND g.status NOT IN ('settled', 'voided')
+    `).get(user.id);
+    const totalAssets = user.balance + pendingRow.total - user.loan_amount;
+
+    if (won) {
+      const basePayout = Math.floor(betAmount * winningOdds);
+      const baseProfit = basePayout - betAmount;
+
+      // Brokie bonus
+      let adjustedProfit;
+      if (totalAssets < 0) {
+        // Tier 1: 15% more on full payout (bet + profit)
+        adjustedProfit = Math.floor(basePayout * 1.15) - betAmount;
+      } else if (totalAssets <= 5000) {
+        // Tier 2: 15% more on net profit only
+        adjustedProfit = Math.floor(baseProfit * 1.15);
+      } else {
+        adjustedProfit = baseProfit;
+      }
+
+      // Debt tax: only on profit, compare balance vs loan_amount
+      if (user.loan_amount > 0) {
+        let keepRate = 1.0;
+        if (user.balance >= 3 * user.loan_amount)      keepRate = 0.50;
+        else if (user.balance >= 2 * user.loan_amount) keepRate = 0.70;
+        else if (user.balance >= user.loan_amount)     keepRate = 0.90;
+
+        if (keepRate < 1.0) {
+          adjustedProfit = Math.floor(adjustedProfit * keepRate);
+        }
+      }
+
+      const finalPayout = betAmount + adjustedProfit;
+      return {
+        payout: finalPayout,
+        recovery: 0,
+        balanceDelta: finalPayout,
+        weeklyProfitDelta: adjustedProfit,
+        totalAssets,
+      };
+    } else {
+      // Loss recovery (no debt tax applied)
+      let recovery = 0;
+      if (totalAssets < 0) {
+        recovery = Math.floor(betAmount * 0.30);
+      } else if (totalAssets <= 5000) {
+        recovery = Math.floor(betAmount * 0.10);
+      }
+
+      return {
+        payout: 0,
+        recovery,
+        balanceDelta: recovery,
+        weeklyProfitDelta: -(betAmount - recovery),
+        totalAssets,
+      };
+    }
+  }
+
   // ── 结算 ──
 
   router.post('/games/:id/settle', requireAdmin, (req, res) => {
@@ -140,14 +209,18 @@ module.exports = (JWT_SECRET, io) => {
 
       for (const bet of bets) {
         const won = bet.team === winner;
+        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(bet.user_id);
+        const outcome = calcBetOutcome(user, bet.amount, won, winningOdds);
+
+        db.prepare('UPDATE users SET balance = balance + ?, weekly_profit = weekly_profit + ? WHERE id = ?')
+          .run(outcome.balanceDelta, outcome.weeklyProfitDelta, bet.user_id);
+        db.prepare('UPDATE bets SET payout = ?, recovery = ? WHERE id = ?')
+          .run(outcome.payout, outcome.recovery, bet.id);
+
         if (won) {
-          const payout = Math.floor(bet.amount * winningOdds);
-          const profit = payout - bet.amount;
-          db.prepare('UPDATE users SET balance = balance + ?, weekly_profit = weekly_profit + ? WHERE id = ?').run(payout, profit, bet.user_id);
-          results.push({ username: bet.username, type: '获胜', amount: payout, profit });
+          results.push({ username: bet.username, type: '获胜', amount: outcome.payout, profit: outcome.weeklyProfitDelta });
         } else {
-          db.prepare('UPDATE users SET weekly_profit = weekly_profit - ? WHERE id = ?').run(bet.amount, bet.user_id);
-          results.push({ username: bet.username, type: '落败', profit: -bet.amount });
+          results.push({ username: bet.username, type: '落败', profit: outcome.weeklyProfitDelta, recovery: outcome.recovery });
         }
       }
 
@@ -181,13 +254,12 @@ module.exports = (JWT_SECRET, io) => {
 
     const resettle = db.transaction(() => {
       const bets = db.prepare(`
-        SELECT b.id, b.user_id, b.team, b.amount, u.username
+        SELECT b.id, b.user_id, b.team, b.amount, b.payout, b.recovery, u.username
         FROM bets b JOIN users u ON b.user_id = u.id
         WHERE b.game_id = ? AND b.status = 'active'
       `).all(gameId);
 
       const oldWinner = game.winner;
-      const oldOdds = oldWinner === 'A' ? game.odds_a : game.odds_b;
       const newOdds = winner === 'A' ? game.odds_a : game.odds_b;
       const newWinnerName = winner === 'A' ? game.team_a : game.team_b;
       const results = [];
@@ -197,26 +269,34 @@ module.exports = (JWT_SECRET, io) => {
         const isWinner  = bet.team === winner;
 
         if (wasWinner && !isWinner) {
-          // Was winner, now loser: reverse old payout, record new loss
-          const oldPayout = Math.floor(bet.amount * oldOdds);
-          db.prepare(`
-            UPDATE users SET
-              balance = balance - ?,
-              weekly_profit = weekly_profit - ? - ?
-            WHERE id = ?
-          `).run(oldPayout, oldPayout - bet.amount, bet.amount, bet.user_id);
-          results.push({ username: bet.username, type: '落败', profit: -bet.amount });
+          // Was winner → now loser: reverse old payout, apply new loss
+          db.prepare('UPDATE users SET balance = balance - ?, weekly_profit = weekly_profit - ? WHERE id = ?')
+            .run(bet.payout, bet.payout - bet.amount, bet.user_id);
+
+          const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(bet.user_id);
+          const outcome = calcBetOutcome(updatedUser, bet.amount, false, newOdds);
+
+          db.prepare('UPDATE users SET balance = balance + ?, weekly_profit = weekly_profit + ? WHERE id = ?')
+            .run(outcome.balanceDelta, outcome.weeklyProfitDelta, bet.user_id);
+          db.prepare('UPDATE bets SET payout = 0, recovery = ? WHERE id = ?')
+            .run(outcome.recovery, bet.id);
+
+          results.push({ username: bet.username, type: '落败', profit: outcome.weeklyProfitDelta, recovery: outcome.recovery });
 
         } else if (!wasWinner && isWinner) {
-          // Was loser, now winner: reverse old loss, give new payout
-          const newPayout = Math.floor(bet.amount * newOdds);
-          db.prepare(`
-            UPDATE users SET
-              balance = balance + ?,
-              weekly_profit = weekly_profit + ? + ?
-            WHERE id = ?
-          `).run(newPayout, bet.amount, newPayout - bet.amount, bet.user_id);
-          results.push({ username: bet.username, type: '获胜', amount: newPayout, profit: newPayout - bet.amount });
+          // Was loser → now winner: reverse old recovery, apply new win
+          db.prepare('UPDATE users SET balance = balance - ?, weekly_profit = weekly_profit + ? WHERE id = ?')
+            .run(bet.recovery, bet.amount - bet.recovery, bet.user_id);
+
+          const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(bet.user_id);
+          const outcome = calcBetOutcome(updatedUser, bet.amount, true, newOdds);
+
+          db.prepare('UPDATE users SET balance = balance + ?, weekly_profit = weekly_profit + ? WHERE id = ?')
+            .run(outcome.balanceDelta, outcome.weeklyProfitDelta, bet.user_id);
+          db.prepare('UPDATE bets SET payout = ?, recovery = 0 WHERE id = ?')
+            .run(outcome.payout, bet.id);
+
+          results.push({ username: bet.username, type: '获胜', amount: outcome.payout, profit: outcome.weeklyProfitDelta });
         }
       }
 
