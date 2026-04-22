@@ -305,6 +305,61 @@
     .outcome-loss .my-bet-outcome-amount { color: var(--text-muted); }
     .my-bet-outcome-breakdown { font-size: 10px; color: var(--text-muted); line-height: 1.5; }
 
+    /* ── Add Bet ── */
+    .add-bet-wrap {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .add-bet-toggle-btn {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px dashed var(--border-bright);
+      border-radius: var(--radius-sm);
+      padding: 9px 14px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all var(--transition);
+    }
+    .add-bet-toggle-btn:hover, .add-bet-toggle-btn.open {
+      border-color: var(--gold-border);
+      color: var(--gold);
+      border-style: solid;
+    }
+    .add-bet-body { margin-top: 14px; }
+    .add-bet-summary {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      padding: 9px 12px;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .add-bet-summary strong { color: var(--gold); font-variant-numeric: tabular-nums; }
+    .add-bet-preview {
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .add-bet-preview-win { background: var(--green-dim); padding: 10px 13px; }
+    .add-bet-preview-lose { background: var(--surface2); padding: 10px 13px; }
+    .add-bet-preview-divider { background: var(--border); }
+    .abp-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+    .abp-amount { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .add-bet-preview-win .abp-amount { color: var(--green); }
+    .add-bet-preview-lose .abp-amount { color: var(--text-muted); }
+    .abp-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
     /* ── My Bet Card ── */
     .my-bet-card {
       background: var(--surface);
@@ -476,6 +531,46 @@
         </div>
       </div>
       <div class="my-bet-outcomes" id="myBetOutcomes"></div>
+
+      <!-- Add more bet -->
+      <div class="add-bet-wrap" id="addBetWrap" style="display:none">
+        <button class="add-bet-toggle-btn" id="addBetToggleBtn" onclick="toggleAddBet()">
+          <span>➕ 加注</span>
+          <span id="addBetChevron">▼</span>
+        </button>
+        <div class="add-bet-body" id="addBetBody" style="display:none">
+          <div class="add-bet-summary" id="addBetSummary"></div>
+
+          <div class="amount-label">追加金额</div>
+          <div class="amount-input-row">
+            <div class="amount-prefix">¥</div>
+            <input type="number" id="addBetAmount" placeholder="0" min="1" oninput="updateAddBetPreview()">
+          </div>
+          <div class="quick-chips" style="margin-bottom:12px">
+            <button class="chip" onclick="setAddAmount(1)">全押</button>
+            <button class="chip" onclick="setAddAmount(0.5)">½</button>
+            <button class="chip" onclick="setAddAmount(0.25)">¼</button>
+            <button class="chip" onclick="setAddAmount(0.1)">10%</button>
+          </div>
+
+          <div class="add-bet-preview" id="addBetPreview" style="display:none">
+            <div class="add-bet-preview-win">
+              <div class="abp-label">🏆 加注后获胜</div>
+              <div class="abp-amount" id="abpWinAmount">--</div>
+              <div class="abp-sub" id="abpWinSub"></div>
+            </div>
+            <div class="add-bet-preview-divider"></div>
+            <div class="add-bet-preview-lose">
+              <div class="abp-label">💸 加注后落败</div>
+              <div class="abp-amount" id="abpLoseAmount">--</div>
+              <div class="abp-sub" id="abpLoseSub"></div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" id="addBetBtn" onclick="submitAddBet()">确认加注</button>
+          <div class="error-msg" id="addBetError"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Bet Form -->
@@ -565,6 +660,7 @@
     let gameData = null;
     let selectedTeam = null;
     let countdownTimer = null;
+    let currentMyBet = null; // tracks placed bet for add-bet feature
 
     async function init() {
       const meRes = await fetch('/api/auth/me');
@@ -742,9 +838,7 @@
         const p = calcPreview(myBet.amount, odds);
         const bd = previewBreakdown(myBet.amount, odds, p);
         const loseClass = p.recovery > 0 ? 'outcome-recover' : 'outcome-loss';
-        const loseAmtHTML = p.recovery > 0
-          ? `返还 ¥${p.recovery.toLocaleString()}`
-          : '全额亏损';
+        const loseAmtHTML = p.recovery > 0 ? `返还 ¥${p.recovery.toLocaleString()}` : '全额亏损';
         outcomesEl.innerHTML = `
           <div class="my-bet-outcome outcome-win">
             <div class="my-bet-outcome-label">🏆 若获胜</div>
@@ -756,6 +850,126 @@
             <div class="my-bet-outcome-amount">${loseAmtHTML}</div>
             <div class="my-bet-outcome-breakdown">${bd.lose}</div>
           </div>`;
+
+        // Show add-bet section for open/pending games
+        currentMyBet = { ...myBet, odds };
+        const addWrap = document.getElementById('addBetWrap');
+        addWrap.style.display = 'block';
+        document.getElementById('addBetSummary').innerHTML =
+          `当前已押 <strong>¥${myBet.amount.toLocaleString()}</strong> · 余额 <strong>¥${myUser.balance.toLocaleString()}</strong>`;
+      }
+    }
+
+    // ── Add Bet ──
+
+    function toggleAddBet() {
+      const body = document.getElementById('addBetBody');
+      const btn  = document.getElementById('addBetToggleBtn');
+      const chev = document.getElementById('addBetChevron');
+      const open = body.style.display === 'none';
+      body.style.display = open ? 'block' : 'none';
+      btn.classList.toggle('open', open);
+      chev.textContent = open ? '▲' : '▼';
+      if (!open) {
+        document.getElementById('addBetAmount').value = '';
+        document.getElementById('addBetPreview').style.display = 'none';
+        document.getElementById('addBetError').textContent = '';
+      }
+    }
+
+    function setAddAmount(fraction) {
+      document.getElementById('addBetAmount').value = Math.floor(myUser.balance * fraction);
+      updateAddBetPreview();
+    }
+
+    // Mirrors calcPreview but uses totalAmt for payout, additionalAmt for debt-tax balance check
+    function calcAddBetPreview(existingAmt, additionalAmt, odds) {
+      const totalAmt = existingAmt + additionalAmt;
+      // myUser.balance is already reduced by existingAmt (bet was placed earlier)
+      // pending_bets already includes existingAmt
+      const totalAssets = (myUser.balance || 0) + (myUser.pending_bets || 0) - (myUser.loan_amount || 0);
+      const postBetBalance = (myUser.balance || 0) - additionalAmt;
+      const loanAmt = myUser.loan_amount || 0;
+
+      const basePayout = Math.floor(totalAmt * odds);
+      const baseProfit = basePayout - totalAmt;
+      let adjustedProfit = baseProfit;
+      let brokieTier = 0;
+
+      if (totalAssets < 0)          { brokieTier = 1; adjustedProfit = Math.floor(basePayout * 1.15) - totalAmt; }
+      else if (totalAssets <= 5000) { brokieTier = 2; adjustedProfit = Math.floor(baseProfit * 1.15); }
+
+      let keepRate = 1.0;
+      if (loanAmt > 0) {
+        if (postBetBalance >= 3 * loanAmt)      keepRate = 0.50;
+        else if (postBetBalance >= 2 * loanAmt) keepRate = 0.70;
+        else if (postBetBalance >= loanAmt)     keepRate = 0.90;
+      }
+      if (keepRate < 1.0) adjustedProfit = Math.floor(adjustedProfit * keepRate);
+
+      let recovery = 0;
+      if (totalAssets < 0)          recovery = Math.floor(totalAmt * 0.30);
+      else if (totalAssets <= 5000) recovery = Math.floor(totalAmt * 0.10);
+
+      return { totalAmt, finalPayout: totalAmt + adjustedProfit, profit: adjustedProfit, recovery };
+    }
+
+    function updateAddBetPreview() {
+      const additional = parseInt(document.getElementById('addBetAmount').value);
+      const previewEl  = document.getElementById('addBetPreview');
+      if (!additional || additional <= 0 || !currentMyBet) {
+        previewEl.style.display = 'none';
+        return;
+      }
+
+      const p = calcAddBetPreview(currentMyBet.amount, additional, currentMyBet.odds);
+      document.getElementById('abpWinAmount').textContent = '¥' + p.finalPayout.toLocaleString();
+      document.getElementById('abpWinSub').textContent = `净赚 +¥${p.profit.toLocaleString()} · 总押 ¥${p.totalAmt.toLocaleString()}`;
+
+      const loseEl = document.getElementById('abpLoseAmount');
+      if (p.recovery > 0) {
+        loseEl.textContent = '返还 ¥' + p.recovery.toLocaleString();
+        loseEl.style.color = 'var(--gold)';
+        document.getElementById('abpLoseSub').textContent = `净亏 -¥${(p.totalAmt - p.recovery).toLocaleString()}`;
+      } else {
+        loseEl.textContent = '全额亏损';
+        loseEl.style.color = '';
+        document.getElementById('abpLoseSub').textContent = `-¥${p.totalAmt.toLocaleString()}`;
+      }
+
+      previewEl.style.display = 'grid';
+      // Update summary
+      document.getElementById('addBetSummary').innerHTML =
+        `当前已押 <strong>¥${currentMyBet.amount.toLocaleString()}</strong> · 追加 <strong>¥${additional.toLocaleString()}</strong> → 总押 <strong>¥${p.totalAmt.toLocaleString()}</strong>`;
+    }
+
+    async function submitAddBet() {
+      const additional = parseInt(document.getElementById('addBetAmount').value);
+      const errorEl = document.getElementById('addBetError');
+      const btn = document.getElementById('addBetBtn');
+      errorEl.textContent = '';
+
+      if (!additional || additional <= 0) { errorEl.textContent = '请输入有效金额'; return; }
+
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+
+      const res = await fetch(`/api/game/${gameId}/add-bet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: additional })
+      });
+      const data = await res.json();
+
+      btn.disabled = false;
+      btn.textContent = '确认加注';
+
+      if (data.success) {
+        myUser.balance = data.newBalance;
+        document.getElementById('navBalance').textContent = '¥' + data.newBalance.toLocaleString();
+        await loadGame();
+      } else {
+        errorEl.textContent = data.error;
       }
     }
 

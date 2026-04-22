@@ -108,6 +108,43 @@ module.exports = (JWT_SECRET, io) => {
     res.json(bets);
   });
 
+  // Add more to existing bet (same team only)
+  router.post('/:id/add-bet', requireAuth, (req, res) => {
+    const gameId = parseInt(req.params.id);
+    const userId = req.user.id;
+    const amt = parseInt(req.body.amount);
+
+    if (!amt || amt <= 0)
+      return res.json({ success: false, error: '请输入有效金额' });
+
+    const game = db.prepare('SELECT * FROM games WHERE id = ?').get(gameId);
+    if (!game) return res.json({ success: false, error: '比赛不存在' });
+    if (!['open', 'pending'].includes(game.status)) return res.json({ success: false, error: '当前不在投注阶段' });
+    if (new Date(game.deadline) <= new Date()) return res.json({ success: false, error: '投注已截止' });
+
+    const existing = db.prepare('SELECT * FROM bets WHERE game_id = ? AND user_id = ?').get(gameId, userId);
+    if (!existing) return res.json({ success: false, error: '你尚未投注本场，请先下注' });
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (user.balance < amt)
+      return res.json({ success: false, error: `余额不足（当前余额 ¥${user.balance.toLocaleString()}）` });
+
+    if (user.loan_amount > 0) {
+      const maxBet = Math.floor(user.balance * 0.5);
+      if (amt > maxBet)
+        return res.json({ success: false, error: `有未还债务，单次加注不可超过余额的 50%（最多 ¥${maxBet.toLocaleString()}）` });
+    }
+
+    db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(amt, userId);
+    db.prepare('UPDATE bets SET amount = amount + ? WHERE game_id = ? AND user_id = ?').run(amt, gameId, userId);
+
+    const allBets = fetchBets(gameId);
+    const totals = calcTotals(allBets);
+    io.to(`game:${gameId}`).emit('betUpdate', { bets: allBets, totals });
+
+    res.json({ success: true, newBalance: user.balance - amt, newBetAmount: existing.amount + amt });
+  });
+
   // Place bet
   router.post('/:id/bet', requireAuth, (req, res) => {
     const gameId = parseInt(req.params.id);
