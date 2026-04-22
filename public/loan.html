@@ -262,7 +262,8 @@
     function updateBorrowBadge() {
       const badge = document.getElementById('borrowBadge');
       const btn = document.getElementById('borrowBtn');
-      if (state.balance < 100) {
+      const effective = state.effective_balance !== undefined ? state.effective_balance : state.balance;
+      if (effective < 100) {
         badge.innerHTML = `<div class="eligibility-badge eligible">✓ &nbsp;符合借款条件</div>`;
         btn.disabled = false;
       } else {
