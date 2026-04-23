@@ -333,18 +333,21 @@
       border-style: solid;
     }
     .add-bet-toggle-btn.locked {
-      background: var(--red-dim);
-      border: 1px solid var(--red-border);
-      border-style: solid;
-      color: var(--red);
+      background: var(--surface2);
+      border: 1px dashed var(--border-bright);
+      border-style: dashed;
+      color: var(--text-muted);
       cursor: default;
-      opacity: 0.85;
     }
     .add-bet-toggle-btn.locked:hover {
       background: var(--red-dim);
       border-color: var(--red-border);
+      border-style: solid;
       color: var(--red);
     }
+    .add-bet-toggle-btn.locked .lock-hint { display: none; }
+    .add-bet-toggle-btn.locked:hover .lock-default { display: none; }
+    .add-bet-toggle-btn.locked:hover .lock-hint { display: inline; }
     .add-bet-body { margin-top: 14px; }
     .add-bet-summary {
       font-size: 12px;
@@ -997,7 +1000,7 @@
       const body = document.getElementById('addBetBody');
       btn.className = 'add-bet-toggle-btn locked';
       btn.onclick = null;
-      btn.innerHTML = '<span>🔒 比赛已开始，无法加注</span>';
+      btn.innerHTML = '<span class="lock-default">🔒 加注</span><span class="lock-hint">比赛已开始，无法加注</span>';
       if (body) body.style.display = 'none';
     }
 
