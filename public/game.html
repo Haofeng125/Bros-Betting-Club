@@ -851,12 +851,16 @@
             <div class="my-bet-outcome-breakdown">${bd.lose}</div>
           </div>`;
 
-        // Show add-bet section for open/pending games
-        currentMyBet = { ...myBet, odds };
+        // Show add-bet section only while betting is still open
         const addWrap = document.getElementById('addBetWrap');
-        addWrap.style.display = 'block';
-        document.getElementById('addBetSummary').innerHTML =
-          `当前已押 <strong>¥${myBet.amount.toLocaleString()}</strong> · 余额 <strong>¥${myUser.balance.toLocaleString()}</strong>`;
+        if (['open', 'pending'].includes(game.status)) {
+          currentMyBet = { ...myBet, odds };
+          addWrap.style.display = 'block';
+          document.getElementById('addBetSummary').innerHTML =
+            `当前已押 <strong>¥${myBet.amount.toLocaleString()}</strong> · 余额 <strong>¥${myUser.balance.toLocaleString()}</strong>`;
+        } else {
+          addWrap.style.display = 'none';
+        }
       }
     }
 
@@ -977,6 +981,7 @@
       clearInterval(countdownTimer);
       document.getElementById('timerSection').innerHTML = '<div class="status-msg">投注已截止，等待比赛结果</div>';
       document.getElementById('betForm').style.display = 'none';
+      document.getElementById('addBetWrap').style.display = 'none';
     }
 
     function showSettled(game) {
@@ -984,6 +989,7 @@
       const winnerName = game.winner === 'A' ? game.team_a : game.team_b;
       document.getElementById('timerSection').innerHTML = `<div class="status-settled">🏆 ${winnerName} 获胜</div>`;
       document.getElementById('betForm').style.display = 'none';
+      document.getElementById('addBetWrap').style.display = 'none';
     }
 
     function startCountdown(deadline) {
