@@ -332,6 +332,19 @@
       color: var(--gold);
       border-style: solid;
     }
+    .add-bet-toggle-btn.locked {
+      background: var(--red-dim);
+      border: 1px solid var(--red-border);
+      border-style: solid;
+      color: var(--red);
+      cursor: default;
+      opacity: 0.85;
+    }
+    .add-bet-toggle-btn.locked:hover {
+      background: var(--red-dim);
+      border-color: var(--red-border);
+      color: var(--red);
+    }
     .add-bet-body { margin-top: 14px; }
     .add-bet-summary {
       font-size: 12px;
@@ -851,15 +864,15 @@
             <div class="my-bet-outcome-breakdown">${bd.lose}</div>
           </div>`;
 
-        // Show add-bet section only while betting is still open
+        // Show add-bet section (open = interactive, closed/settled = locked)
         const addWrap = document.getElementById('addBetWrap');
+        addWrap.style.display = 'block';
         if (['open', 'pending'].includes(game.status)) {
           currentMyBet = { ...myBet, odds };
-          addWrap.style.display = 'block';
           document.getElementById('addBetSummary').innerHTML =
             `当前已押 <strong>¥${myBet.amount.toLocaleString()}</strong> · 余额 <strong>¥${myUser.balance.toLocaleString()}</strong>`;
         } else {
-          addWrap.style.display = 'none';
+          lockAddBet();
         }
       }
     }
@@ -977,11 +990,22 @@
       }
     }
 
+    function lockAddBet() {
+      const wrap = document.getElementById('addBetWrap');
+      if (wrap.style.display === 'none') return; // not shown, nothing to lock
+      const btn = document.getElementById('addBetToggleBtn');
+      const body = document.getElementById('addBetBody');
+      btn.className = 'add-bet-toggle-btn locked';
+      btn.onclick = null;
+      btn.innerHTML = '<span>🔒 比赛已开始，无法加注</span>';
+      if (body) body.style.display = 'none';
+    }
+
     function showClosed() {
       clearInterval(countdownTimer);
       document.getElementById('timerSection').innerHTML = '<div class="status-msg">投注已截止，等待比赛结果</div>';
       document.getElementById('betForm').style.display = 'none';
-      document.getElementById('addBetWrap').style.display = 'none';
+      lockAddBet();
     }
 
     function showSettled(game) {
@@ -989,7 +1013,7 @@
       const winnerName = game.winner === 'A' ? game.team_a : game.team_b;
       document.getElementById('timerSection').innerHTML = `<div class="status-settled">🏆 ${winnerName} 获胜</div>`;
       document.getElementById('betForm').style.display = 'none';
-      document.getElementById('addBetWrap').style.display = 'none';
+      lockAddBet();
     }
 
     function startCountdown(deadline) {
