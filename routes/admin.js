@@ -20,12 +20,14 @@ module.exports = (JWT_SECRET, io) => {
   }
 
   // Allows both full admins and vice-admins (game management only)
+  // Always re-checks DB so permission changes take effect without re-login
   function requireViceAdmin(req, res, next) {
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ error: '未授权' });
     try {
       const user = jwt.verify(token, JWT_SECRET);
-      if (!user.isAdmin && !user.isViceAdmin) return res.status(403).json({ error: '无权限' });
+      const row = db.prepare('SELECT is_admin, is_vice_admin FROM users WHERE id = ?').get(user.id);
+      if (!row || (!row.is_admin && !row.is_vice_admin)) return res.status(403).json({ error: '无权限' });
       req.user = user;
       next();
     } catch {
