@@ -64,6 +64,20 @@ function requireAdmin(req, res, next) {
   }
 }
 
+function requireAdminOrVice(req, res, next) {
+  const token = req.cookies.token;
+  if (!token) return res.redirect('/login.html');
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    const row = db.prepare('SELECT is_admin, is_vice_admin FROM users WHERE id = ?').get(user.id);
+    if (!row || (!row.is_admin && !row.is_vice_admin)) return res.status(403).send('无权限');
+    req.user = user;
+    next();
+  } catch {
+    res.redirect('/login.html');
+  }
+}
+
 // ── API routes ──
 
 app.use('/api/auth', authRoutes(JWT_SECRET, loginLimiter));
@@ -76,7 +90,7 @@ app.get('/', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/admin', requireAdmin, (req, res) => {
+app.get('/admin', requireAdminOrVice, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 

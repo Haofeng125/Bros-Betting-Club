@@ -207,9 +207,21 @@
               <div class="action-sub">更新你的账户密码</div>
             </div>
           </a>
+          <button onclick="logout()" class="action-card" style="grid-column:1/-1;text-align:left;border-color:var(--red-border);cursor:pointer;font-family:inherit">
+            <div class="action-icon">🚪</div>
+            <div>
+              <div class="action-label" style="color:var(--red)">退出登录</div>
+              <div class="action-sub">退出当前账户</div>
+            </div>
+          </button>
         </div>`;
 
       document.getElementById('content').innerHTML = html;
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
     }
 
     init();
