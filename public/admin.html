@@ -51,6 +51,36 @@
     }
     .odds-preview-hint span { color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
 
+    .odds-type-toggle {
+      display: inline-flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 3px;
+      gap: 2px;
+      margin-bottom: 14px;
+    }
+    .odds-type-btn {
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--transition);
+    }
+    .odds-type-btn.active { background: var(--gold); color: #09090f; }
+    .odds-converted {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      min-height: 16px;
+    }
+    .odds-converted .val { color: var(--blue); font-weight: 700; font-variant-numeric: tabular-nums; }
+
     .loan-tag {
       font-size: 11px;
       padding: 2px 8px;
@@ -103,15 +133,24 @@
             <label>客队</label>
             <input type="text" id="teamB" placeholder="例：勇士">
           </div>
-          <div class="form-group" style="margin:0">
-            <label>主队赔率</label>
-            <input type="number" id="oddsA" placeholder="例：1.44" step="0.01" min="1.01" oninput="updateOddsPreview('A')">
-            <div class="odds-preview-hint" id="previewA">投 ¥100 → 赢 <span>—</span></div>
+          <!-- Odds type toggle — spans full width -->
+          <div style="grid-column:1/-1;margin-bottom:-4px">
+            <div class="odds-type-toggle">
+              <button class="odds-type-btn active" id="oddsTypeDecimal" onclick="setOddsType('decimal')">中式（小数）</button>
+              <button class="odds-type-btn" id="oddsTypeAmerican" onclick="setOddsType('american')">美式（ESPN）</button>
+            </div>
           </div>
           <div class="form-group" style="margin:0">
-            <label>客队赔率</label>
-            <input type="number" id="oddsB" placeholder="例：2.65" step="0.01" min="1.01" oninput="updateOddsPreview('B')">
+            <label id="labelA">主队赔率</label>
+            <input type="number" id="oddsA" placeholder="例：1.44" step="0.01" oninput="updateOddsPreview('A')">
+            <div class="odds-preview-hint" id="previewA">投 ¥100 → 赢 <span>—</span></div>
+            <div class="odds-converted" id="convertedA"></div>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label id="labelB">客队赔率</label>
+            <input type="number" id="oddsB" placeholder="例：2.65" step="0.01" oninput="updateOddsPreview('B')">
             <div class="odds-preview-hint" id="previewB">投 ¥100 → 赢 <span>—</span></div>
+            <div class="odds-converted" id="convertedB"></div>
           </div>
           <div class="form-group" style="margin:0">
             <label>截止日期</label>
@@ -295,10 +334,66 @@
       document.getElementById('tab-' + name).classList.add('active');
     }
 
+    let oddsMode = 'decimal'; // 'decimal' | 'american'
+
+    function setOddsType(mode) {
+      oddsMode = mode;
+      document.getElementById('oddsTypeDecimal').classList.toggle('active', mode === 'decimal');
+      document.getElementById('oddsTypeAmerican').classList.toggle('active', mode === 'american');
+
+      const isAmerican = mode === 'american';
+      ['A', 'B'].forEach(side => {
+        const input = document.getElementById('odds' + side);
+        const label = document.getElementById('label' + side);
+        const teamName = side === 'A' ? '主队' : '客队';
+        label.textContent = isAmerican ? `${teamName}赔率（美式）` : `${teamName}赔率`;
+        input.placeholder = isAmerican ? '例：+220 或 -119' : (side === 'A' ? '例：1.44' : '例：2.65');
+        input.step = isAmerican ? '1' : '0.01';
+        input.value = '';
+        document.getElementById('preview' + side).querySelector('span').textContent = '—';
+        document.getElementById('converted' + side).innerHTML = '';
+      });
+    }
+
+    function americanToDecimal(val) {
+      if (val > 0) return (val / 100) + 1;
+      if (val < 0) return (100 / Math.abs(val)) + 1;
+      return NaN;
+    }
+
     function updateOddsPreview(side) {
-      const val = parseFloat(document.getElementById('odds' + side).value);
-      const el = document.getElementById('preview' + side).querySelector('span');
-      el.textContent = val > 1 ? '¥' + Math.floor(100 * val) : '—';
+      const raw = parseFloat(document.getElementById('odds' + side).value);
+      const previewSpan = document.getElementById('preview' + side).querySelector('span');
+      const convertedEl = document.getElementById('converted' + side);
+
+      if (isNaN(raw)) {
+        previewSpan.textContent = '—';
+        convertedEl.innerHTML = '';
+        return;
+      }
+
+      if (oddsMode === 'american') {
+        const dec = americanToDecimal(raw);
+        if (isNaN(dec) || dec <= 1) {
+          previewSpan.textContent = '—';
+          convertedEl.innerHTML = '<span style="color:var(--red);font-size:11px">无效赔率</span>';
+          return;
+        }
+        const decFixed = dec.toFixed(2);
+        previewSpan.textContent = '¥' + Math.floor(100 * dec);
+        convertedEl.innerHTML = `→ 中式赔率 <span class="val">${decFixed}</span>`;
+      } else {
+        previewSpan.textContent = raw > 1 ? '¥' + Math.floor(100 * raw) : '—';
+        convertedEl.innerHTML = '';
+      }
+    }
+
+    // Returns the final decimal odds value from the input (converting if needed)
+    function getDecimalOdds(side) {
+      const raw = parseFloat(document.getElementById('odds' + side).value);
+      if (isNaN(raw)) return NaN;
+      if (oddsMode === 'american') return parseFloat(americanToDecimal(raw).toFixed(2));
+      return raw;
     }
 
     // ── 比赛 ──
@@ -348,20 +443,20 @@
     async function createGame() {
       const team_a = document.getElementById('teamA').value.trim();
       const team_b = document.getElementById('teamB').value.trim();
-      const odds_a = document.getElementById('oddsA').value;
-      const odds_b = document.getElementById('oddsB').value;
+      const odds_a = getDecimalOdds('A');
+      const odds_b = getDecimalOdds('B');
       const deadlineDate = document.getElementById('deadlineDate').value;
       const deadlineTime = document.getElementById('deadlineTime').value;
       const errorEl = document.getElementById('gameError');
 
-      if (!team_a || !team_b || !odds_a || !odds_b || !deadlineDate || !deadlineTime) {
+      if (!team_a || !team_b || isNaN(odds_a) || isNaN(odds_b) || !deadlineDate || !deadlineTime) {
         errorEl.textContent = '请填写完整信息'; return;
       }
       if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(deadlineTime)) {
         errorEl.textContent = '时间格式错误，请输入 00:00 ~ 23:59'; return;
       }
-      if (parseFloat(odds_a) <= 1.0 || parseFloat(odds_b) <= 1.0) {
-        errorEl.textContent = '赔率必须大于 1.0'; return;
+      if (odds_a <= 1.0 || odds_b <= 1.0) {
+        errorEl.textContent = '赔率必须大于 1.0（换算后）'; return;
       }
       const deadline = `${deadlineDate}T${deadlineTime}`;
       if (new Date(deadline) <= new Date()) { errorEl.textContent = '截止时间必须晚于当前时间'; return; }
@@ -375,6 +470,7 @@
       if (data.success) {
         ['teamA','teamB','oddsA','oddsB','deadlineDate','deadlineTime'].forEach(id => document.getElementById(id).value = '');
         document.querySelectorAll('.odds-preview-hint span').forEach(s => s.textContent = '—');
+        document.querySelectorAll('.odds-converted').forEach(el => el.innerHTML = '');
         errorEl.textContent = '';
         loadGames();
       } else {
