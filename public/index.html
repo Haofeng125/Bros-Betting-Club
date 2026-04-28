@@ -210,7 +210,7 @@
       if (!user.loggedIn) { window.location.href = '/login.html'; return; }
       document.getElementById('navUsername').textContent = user.username;
       document.getElementById('navBalance').textContent = '¥' + user.balance.toLocaleString();
-      if (user.is_admin) document.getElementById('adminBtn').style.display = 'inline-flex';
+      if (user.is_admin || user.is_vice_admin) document.getElementById('adminBtn').style.display = 'inline-flex';
       loadActive();
     }
 
