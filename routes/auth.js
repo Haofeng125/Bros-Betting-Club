@@ -42,13 +42,13 @@ module.exports = (JWT_SECRET, loginLimiter) => {
       return res.json({ success: false, error: '用户名或密码错误' });
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, isAdmin: user.is_admin === 1 },
+      { id: user.id, username: user.username, isAdmin: user.is_admin === 1, isViceAdmin: user.is_vice_admin === 1 },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
-    res.json({ success: true, isAdmin: user.is_admin === 1 });
+    res.json({ success: true, isAdmin: user.is_admin === 1, isViceAdmin: user.is_vice_admin === 1 });
   });
 
   router.post('/logout', (req, res) => {
@@ -125,7 +125,7 @@ module.exports = (JWT_SECRET, loginLimiter) => {
     if (!token) return res.json({ loggedIn: false });
     try {
       const user = jwt.verify(token, JWT_SECRET);
-      const row = db.prepare('SELECT id, username, balance, loan_amount, is_admin FROM users WHERE id = ?').get(user.id);
+      const row = db.prepare('SELECT id, username, balance, loan_amount, is_admin, is_vice_admin FROM users WHERE id = ?').get(user.id);
       const pendingRow = db.prepare(`
         SELECT COALESCE(SUM(b.amount), 0) AS total
         FROM bets b JOIN games g ON b.game_id = g.id

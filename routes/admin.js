@@ -19,11 +19,25 @@ module.exports = (JWT_SECRET, io) => {
     }
   }
 
+  // Allows both full admins and vice-admins (game management only)
+  function requireViceAdmin(req, res, next) {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ error: '未授权' });
+    try {
+      const user = jwt.verify(token, JWT_SECRET);
+      if (!user.isAdmin && !user.isViceAdmin) return res.status(403).json({ error: '无权限' });
+      req.user = user;
+      next();
+    } catch {
+      res.status(401).json({ error: '未授权' });
+    }
+  }
+
   // ── 玩家管理 ──
 
   router.get('/users', requireAdmin, (req, res) => {
     const users = db.prepare(`
-      SELECT id, username, balance, loan_amount, is_admin
+      SELECT id, username, balance, loan_amount, is_admin, is_vice_admin
       FROM users ORDER BY balance DESC
     `).all();
     res.json(users);
@@ -43,11 +57,13 @@ module.exports = (JWT_SECRET, io) => {
   });
 
   router.put('/users/:id', requireAdmin, (req, res) => {
-    const { balance, password, loan_amount } = req.body;
+    const { balance, password, loan_amount, is_vice_admin } = req.body;
     const id = parseInt(req.params.id);
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
     if (!user) return res.json({ success: false, error: '用户不存在' });
+    if (user.is_admin && is_vice_admin !== undefined)
+      return res.json({ success: false, error: '不能修改管理员权限' });
 
     if (password) {
       const hash = bcrypt.hashSync(password, 10);
@@ -57,6 +73,8 @@ module.exports = (JWT_SECRET, io) => {
       db.prepare('UPDATE users SET balance = ? WHERE id = ?').run(parseInt(balance), id);
     if (loan_amount !== undefined && !isNaN(loan_amount))
       db.prepare('UPDATE users SET loan_amount = ? WHERE id = ?').run(Math.max(0, parseInt(loan_amount)), id);
+    if (is_vice_admin !== undefined)
+      db.prepare('UPDATE users SET is_vice_admin = ? WHERE id = ?').run(is_vice_admin ? 1 : 0, id);
 
     res.json({ success: true });
   });
@@ -73,12 +91,12 @@ module.exports = (JWT_SECRET, io) => {
 
   // ── 比赛管理 ──
 
-  router.get('/games', requireAdmin, (req, res) => {
+  router.get('/games', requireViceAdmin, (req, res) => {
     const games = db.prepare('SELECT * FROM games ORDER BY created_at DESC LIMIT 30').all();
     res.json(games);
   });
 
-  router.post('/games', requireAdmin, (req, res) => {
+  router.post('/games', requireViceAdmin, (req, res) => {
     const { team_a, team_b, deadline, odds_a, odds_b } = req.body;
     if (!team_a || !team_b || !deadline || !odds_a || !odds_b)
       return res.json({ success: false, error: '请填写完整比赛信息（包含赔率）' });
@@ -96,7 +114,7 @@ module.exports = (JWT_SECRET, io) => {
     res.json({ success: true });
   });
 
-  router.delete('/games/:id', requireAdmin, (req, res) => {
+  router.delete('/games/:id', requireViceAdmin, (req, res) => {
     const id = parseInt(req.params.id);
     const game = db.prepare('SELECT * FROM games WHERE id = ?').get(id);
     if (!game) return res.json({ success: false, error: '比赛不存在' });
@@ -177,7 +195,7 @@ module.exports = (JWT_SECRET, io) => {
 
   // ── 结算 ──
 
-  router.post('/games/:id/settle', requireAdmin, (req, res) => {
+  router.post('/games/:id/settle', requireViceAdmin, (req, res) => {
     const gameId = parseInt(req.params.id);
     const { winner } = req.body; // 'A' or 'B'
 
@@ -240,7 +258,7 @@ module.exports = (JWT_SECRET, io) => {
 
   // ── 修改结算结果 ──
 
-  router.post('/games/:id/resettle', requireAdmin, (req, res) => {
+  router.post('/games/:id/resettle', requireViceAdmin, (req, res) => {
     const gameId = parseInt(req.params.id);
     const { winner } = req.body;
 

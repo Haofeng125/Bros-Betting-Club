@@ -83,10 +83,10 @@
 
   <div class="container">
     <div class="page-header">
-      <div class="page-title">管理后台</div>
-      <div class="tabs" style="margin-bottom:0">
+      <div class="page-title" id="pageTitle">管理后台</div>
+      <div class="tabs" style="margin-bottom:0" id="tabBar">
         <button class="tab active" onclick="switchTab('games')">比赛</button>
-        <button class="tab" onclick="switchTab('players')">玩家</button>
+        <button class="tab" id="tabPlayers" onclick="switchTab('players')">玩家</button>
       </div>
     </div>
 
@@ -250,6 +250,13 @@
         <label>新密码（留空不修改）</label>
         <input type="password" id="editPassword" placeholder="留空则不修改">
       </div>
+      <div class="form-group" id="viceAdminGroup" style="display:none">
+        <label style="margin-bottom:10px;display:block">权限</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+          <input type="checkbox" id="editViceAdmin" style="width:16px;height:16px;accent-color:var(--gold)">
+          设为副管理员（可创建比赛、公布结果）
+        </label>
+      </div>
       <div class="error-msg" id="editPlayerError"></div>
       <div class="modal-actions">
         <button class="btn btn-primary" style="margin-top:0" onclick="savePlayer()">保存</button>
@@ -260,13 +267,24 @@
 
   <script>
     let editingUserId = null;
+    let currentUserIsAdmin = false;
 
     async function init() {
       const res = await fetch('/api/auth/me');
-      const user = await res.json();
-      if (!user.loggedIn || !user.is_admin) { window.location.href = '/login.html'; return; }
+      const me = await res.json();
+      if (!me.loggedIn || (!me.is_admin && !me.is_vice_admin)) {
+        window.location.href = '/login.html'; return;
+      }
+      currentUserIsAdmin = !!me.is_admin;
+
+      if (!me.is_admin) {
+        // Vice-admin: hide players tab, rename title
+        document.getElementById('pageTitle').textContent = '比赛管理';
+        document.getElementById('tabPlayers').style.display = 'none';
+      }
+
       loadGames();
-      loadPlayers();
+      if (me.is_admin) loadPlayers();
     }
 
     function switchTab(name) {
@@ -473,12 +491,16 @@
       }
       tbody.innerHTML = users.map(u => `
         <tr>
-          <td><strong>${u.username}</strong>${u.is_admin ? ' <span style="color:var(--gold);font-size:11px;font-weight:600">管理员</span>' : ''}</td>
+          <td>
+            <strong>${u.username}</strong>
+            ${u.is_admin ? ' <span style="color:var(--gold);font-size:11px;font-weight:600">管理员</span>' : ''}
+            ${u.is_vice_admin && !u.is_admin ? ' <span style="color:var(--blue);font-size:11px;font-weight:600">副管</span>' : ''}
+          </td>
           <td style="color:var(--gold);font-weight:700;font-variant-numeric:tabular-nums">¥${u.balance.toLocaleString()}</td>
           <td>${u.loan_amount > 0 ? `<span class="loan-tag">欠 ¥${u.loan_amount.toLocaleString()}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
           <td>
             <div class="action-btns">
-              <button class="btn btn-ghost btn-sm" onclick="openEditPlayer(${u.id},'${u.username}',${u.balance},${u.loan_amount})">编辑</button>
+              <button class="btn btn-ghost btn-sm" onclick="openEditPlayer(${u.id},'${u.username}',${u.balance},${u.loan_amount},${!!u.is_vice_admin},${!!u.is_admin})">编辑</button>
               ${!u.is_admin ? `<button class="btn btn-danger btn-sm" onclick="deletePlayer(${u.id},'${u.username}')">删除</button>` : ''}
             </div>
           </td>
@@ -509,13 +531,17 @@
       else errorEl.textContent = data.error;
     }
 
-    function openEditPlayer(id, username, balance, loan) {
+    function openEditPlayer(id, username, balance, loan, isViceAdmin, isAdmin) {
       editingUserId = id;
       document.getElementById('editUsername').textContent = username;
       document.getElementById('editBalance').value = balance;
       document.getElementById('editLoan').value = loan;
       document.getElementById('editPassword').value = '';
       document.getElementById('editPlayerError').textContent = '';
+      // Show vice-admin toggle only for non-admin users, and only if current user is admin
+      const viceGroup = document.getElementById('viceAdminGroup');
+      viceGroup.style.display = (!isAdmin && currentUserIsAdmin) ? 'block' : 'none';
+      document.getElementById('editViceAdmin').checked = !!isViceAdmin;
       document.getElementById('editPlayerModal').classList.add('open');
     }
 
@@ -528,6 +554,10 @@
       if (password) {
         if (password.length < 6) { errorEl.textContent = '密码至少6位'; return; }
         body.password = password;
+      }
+      // Include vice-admin toggle if visible
+      if (document.getElementById('viceAdminGroup').style.display !== 'none') {
+        body.is_vice_admin = document.getElementById('editViceAdmin').checked;
       }
       const res = await fetch(`/api/admin/users/${editingUserId}`, {
         method: 'PUT',
